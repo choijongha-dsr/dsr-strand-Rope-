@@ -4,9 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>DSR 연선공정표</title>
-<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+<script src="/js/xlsx.full.min.js"></script>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;900&display=swap');
+/* Google Fonts 대신 시스템 한글 폰트 사용 (CDN 차단 환경 대응) */
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
 :root{
   --navy:#0f2744;--navy2:#1a3a5c;--navy3:#243f63;
@@ -19,7 +19,7 @@
   --shadow:0 2px 8px rgba(0,0,0,0.08);
   --shadow-lg:0 4px 20px rgba(0,0,0,0.14);
 }
-body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+body{font-family:'Noto Sans KR','Apple SD Gothic Neo','맑은 고딕','Malgun Gothic',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
 
 /* HEADER */
 #hdr{
@@ -309,45 +309,9 @@ select.status-sel.s-iw{background:#eff6ff;border-color:var(--blue2);color:#1565c
 .fab:active{transform:scale(0.9);}
 
 
-/* ── ILBO ── */
-#ilbo-wrap{padding:10px 10px 60px;}
-.ilbo-page{max-width:900px;margin:0 auto;background:#fff;border:1px solid #ccc;padding:14px 12px 10px;font-size:11.5px;}
-.it{width:100%;border-collapse:collapse;table-layout:fixed;margin-top:-1px;}
-.it th,.it td{border:1px solid #333;padding:1px 3px;vertical-align:middle;text-align:center;height:26px;line-height:1.3;font-size:11px;}
-.it th{background:#d8d8d8;font-weight:700;}
-.it-lbl{background:#d8d8d8!important;font-weight:700!important;text-align:center!important;white-space:nowrap;}
-.it td input,.it td select,.it td textarea{width:100%;border:none;outline:none;font-family:inherit;font-size:11px;background:transparent;text-align:center;padding:0 2px;height:100%;resize:none;display:block;}
-.it td input:focus,.it td select:focus,.it td textarea:focus{background:#fffde7;}
-.it td input[type=number]{-moz-appearance:textfield;appearance:textfield;}
-.it td input[type=number]::-webkit-inner-spin-button{display:none;}
-.it td input.la{text-align:left;padding-left:3px;}
-.it-dcell{position:relative;height:44px;padding:0;}
-.it-dline{position:absolute;inset:0;background:linear-gradient(to bottom right,transparent calc(50% - 0.5px),#333 50%,transparent calc(50% + 0.5px));}
-.it-dtop{position:absolute;top:3px;right:4px;font-size:10px;font-weight:700;}
-.it-dbot{position:absolute;bottom:3px;left:4px;font-size:10px;font-weight:700;}
-.ilbo-title-row{display:flex;align-items:stretch;}
-.ilbo-title-txt{flex:1;font-size:20px;font-weight:900;letter-spacing:3px;text-align:center;border:1px solid #333;border-right:none;display:flex;align-items:center;justify-content:center;padding:6px 0;}
-.ilbo-appr{border-collapse:collapse;border:1px solid #333;}
-.ilbo-appr th,.ilbo-appr td{border:1px solid #333;text-align:center;font-size:11px;font-weight:700;}
-.ilbo-appr th{background:#d8d8d8;padding:2px 12px;height:22px;}
-.ilbo-appr td{height:40px;min-width:52px;vertical-align:top;}
-.ilbo-appr .rl{writing-mode:vertical-rl;letter-spacing:4px;padding:4px 6px;font-size:11px;background:#d8d8d8;border-right:1px solid #333;}
-.ilbo-wdrow{border:1px solid #333;border-top:none;padding:4px 10px;display:flex;align-items:center;gap:3px;font-size:12px;}
-.ilbo-wdrow .uf{border:none;border-bottom:1.5px solid #555;outline:none;font-family:inherit;font-size:12px;text-align:center;background:transparent;}
-.ilbo-chk{display:inline-flex;align-items:center;gap:4px;margin-right:12px;cursor:pointer;font-size:11.5px;}
-.ilbo-chk input{width:14px;height:14px;accent-color:#c0392b;cursor:pointer;}
-.ilbo-rad{display:inline-flex;align-items:center;gap:3px;margin:0 8px;cursor:pointer;font-size:11.5px;}
-.ilbo-rad input{width:13px;height:13px;accent-color:#2980b9;cursor:pointer;}
-.it-hrtd{padding:0!important;}
-.it-hrtd textarea{font-size:9px!important;padding:1px!important;min-height:28px;line-height:1.2;}
-.ilbo-ff{display:flex;justify-content:space-between;font-size:10px;color:#555;margin-top:6px;padding:0 2px;}
-.ilbo-bar{background:#f0f4fa;border:1px solid #dde2ea;border-radius:8px;padding:8px 12px;margin-bottom:10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
-.ilbo-bar label{font-size:11px;font-weight:700;color:#555;}
-.ilbo-bar select{padding:4px 7px;border:1.5px solid #ccc;border-radius:5px;font-family:inherit;font-size:12px;}
-.ilbo-bar select:focus{outline:none;border-color:var(--blue2);}
+/* ── ILBO (구 클래스 — 하위 호환용 최소 유지) ── */
 .ibtn{padding:5px 10px;border:none;border-radius:5px;cursor:pointer;font-size:11px;font-weight:700;font-family:inherit;}
 .ibtn-g{background:var(--green2);color:#fff;}.ibtn-b{background:var(--blue2);color:#fff;}.ibtn-r{background:var(--red);color:#fff;}
-#ilbo-sst{font-size:11px;}
 
 /* PRINT */
 @media print{
@@ -385,7 +349,7 @@ tbody tr.just-done{animation:rowDone 0.75s ease forwards;}
 .ilbo-bar{
   background:var(--navy2);border-bottom:2px solid var(--red);
   padding:8px 14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;
-  position:sticky;top:89px;z-index:50;
+  position:sticky;top:103px;z-index:50;
 }
 .ilbo-bar label{font-size:11px;font-weight:700;color:#aac;white-space:nowrap;}
 .ilbo-bar select,.ilbo-bar input[type=date]{
