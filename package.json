@@ -1,0 +1,13 @@
+{
+  "name": "dsr-strand-rope",
+  "version": "1.0.0",
+  "description": "DSR 연선공정표 & 작업일보 관리 시스템",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  }
+}
