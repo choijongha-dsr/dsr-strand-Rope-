@@ -474,10 +474,6 @@ tbody tr.just-done{animation:rowDone 0.75s ease forwards;}
   <span class="hdr-date" id="hdr-date"></span>
   <div class="hdr-right">
     <button class="btn btn-navy" onclick="location.href='/index.html'" style="background:rgba(255,255,255,0.22);color:#ffccd2;font-weight:800;border:1.5px solid rgba(255,255,255,0.15);">🔌 소선 발주 계산기</button>
-    <label class="btn btn-navy" style="cursor:pointer;">
-      📊 엑셀 업로드
-      <input type="file" accept=".xlsx,.xls" style="display:none;" onchange="handleExcelUpload(event)">
-    </label>
     <button class="btn btn-navy" onclick="handleDayClose()" title="금일 생산량을 전일로 이동하고 잔량 차감">📅 전일마감</button>
     <button class="btn btn-ghost" onclick="loadData()"><span id="sync-dot"></span> 동기화</button>
     <span id="live-badge" style="display:none;align-items:center;gap:4px;padding:5px 9px;border-radius:6px;background:rgba(46,204,113,0.15);color:#2ecc71;font-size:11px;font-weight:700;border:1px solid rgba(46,204,113,0.3);">
@@ -788,7 +784,7 @@ function renderSummary(){
     el.innerHTML = `<div class="empty-state">
       <div class="empty-icon">📊</div>
       <h3>공정표 데이터 없음</h3>
-      <p>우측 상단 <strong>엑셀 업로드</strong> 버튼으로<br>공정표 엑셀을 불러오면 전체 현황이 표시됩니다.</p>
+      <p>서버가 공유폴더의 엑셀 파일을 읽는 중입니다.<br>잠시 후 자동으로 데이터가 표시됩니다.</p>
     </div>`;
     return;
   }
