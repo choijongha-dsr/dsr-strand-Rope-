@@ -43,6 +43,7 @@ body{font-family:'Noto Sans KR','Apple SD Gothic Neo','맑은 고딕','Malgun Go
 #sync-dot.ok{background:#2ecc71;}
 #sync-dot.saving{background:var(--amber2);animation:pulse 0.6s infinite;}
 @keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.3;}}
+@keyframes livepulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:0.4;transform:scale(0.7);}}
 
 /* TABS */
 #tabs{
@@ -479,6 +480,10 @@ tbody tr.just-done{animation:rowDone 0.75s ease forwards;}
     </label>
     <button class="btn btn-navy" onclick="handleDayClose()" title="금일 생산량을 전일로 이동하고 잔량 차감">📅 전일마감</button>
     <button class="btn btn-ghost" onclick="loadData()"><span id="sync-dot"></span> 동기화</button>
+    <span id="live-badge" style="display:none;align-items:center;gap:4px;padding:5px 9px;border-radius:6px;background:rgba(46,204,113,0.15);color:#2ecc71;font-size:11px;font-weight:700;border:1px solid rgba(46,204,113,0.3);">
+      <span id="live-dot" style="width:7px;height:7px;border-radius:50%;background:#2ecc71;display:inline-block;"></span>
+      LIVE
+    </span>
     <button class="btn btn-green" onclick="saveData()">💾 저장</button>
     <button class="btn btn-navy" onclick="window.print()">🖨️ 인쇄</button>
   </div>
@@ -1669,9 +1674,13 @@ function handleExcelUpload(e){
   if(!file) return;
   e.target.value = '';
   const reader = new FileReader();
-  reader.onload = function(evt){
+  reader.onload = function(evt){ parseExcelBuffer(evt.target.result, '수동 업로드'); };
+  reader.readAsArrayBuffer(file);
+}
+
+function parseExcelBuffer(arrayBuffer, source){
     try{
-      const wb = XLSX.read(new Uint8Array(evt.target.result), {type:'array'});
+      const wb = XLSX.read(new Uint8Array(arrayBuffer), {type:'array'});
       const dateSheets = wb.SheetNames.filter(n=>/^\d+\.\d+$/.test(n.trim()));
       if(!dateSheets.length){ showToast('날짜 형식 시트(예: 5.11)를 찾을 수 없습니다.'); return; }
 
@@ -1773,14 +1782,68 @@ function handleExcelUpload(e){
       const total = Object.values(newBaseOrders).reduce((a,arr)=>a+arr.length,0);
       saveData();
       renderAll();
-      showToast(`📊 업로드 완료 — ${sheetName} 시트 · ${total}건`);
+      showToast(`📊 ${source||'업로드'} 완료 — ${sheetName} 시트 · ${total}건`);
     }catch(err){
       console.error(err);
       showToast('⚠️ 엑셀 오류: '+(err.message||'알 수 없는 오류'));
     }
-  };
-  reader.readAsArrayBuffer(file);
 }
+
+// ── LIVE SYNC (WebSocket) ─────────────────────────────────────
+(function initLiveSync(){
+  const badge = document.getElementById('live-badge');
+  const dot   = document.getElementById('live-dot');
+  let ws, retryDelay = 2000;
+
+  function setLiveStatus(connected){
+    badge.style.display = connected ? 'flex' : 'none';
+    if(connected){
+      dot.style.animation = 'livepulse 2s infinite';
+    }
+  }
+
+  function connect(){
+    const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+    ws = new WebSocket(`${proto}//${location.host}`);
+
+    ws.onopen = () => {
+      setLiveStatus(true);
+      retryDelay = 2000;
+      console.log('[WS] 연결됨');
+    };
+
+    ws.onmessage = (e) => {
+      try{
+        const msg = JSON.parse(e.data);
+        if(msg.type === 'excel-update'){
+          // base64 → ArrayBuffer → 기존 파서
+          const bin = atob(msg.data);
+          const arr = new Uint8Array(bin.length);
+          for(let i=0;i<bin.length;i++) arr[i]=bin.charCodeAt(i);
+          parseExcelBuffer(arr.buffer, `📡 자동 동기화 (${msg.reason||''})`);
+        } else if(msg.type === 'excel-error'){
+          console.warn('[WS] Excel 오류:', msg.message);
+        }
+      }catch(err){ console.error('[WS] 메시지 처리 오류', err); }
+    };
+
+    ws.onclose = () => {
+      setLiveStatus(false);
+      console.log(`[WS] 연결 끊김, ${retryDelay/1000}초 후 재연결`);
+      setTimeout(connect, retryDelay);
+      retryDelay = Math.min(retryDelay * 2, 30000);
+    };
+
+    ws.onerror = () => ws.close();
+  }
+
+  // DOM 로드 후 연결
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', connect);
+  } else {
+    connect();
+  }
+})();
 
 // ── WORK REPORT MODAL (A4 양식 I-207-1) ──────────────────────
 let _wrEnvState = {feed:'', body:'', wind:''};
