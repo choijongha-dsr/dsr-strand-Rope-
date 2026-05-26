@@ -688,12 +688,31 @@ async function saveData(){
     if(res.ok){
       setSyncDot('ok');
       showToast('💾 서버 저장 완료');
+      writeToExcel();
     } else {
       throw new Error('Server response not ok');
     }
   }catch(e){
     setSyncDot('');
     showToast('💾 로컬 캐시 저장 (서버 전송 실패 - 네트워크 확인)');
+  }
+}
+
+async function writeToExcel(){
+  try{
+    const res = await fetch('/api/excel/write', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prodData, baseOrders, prevData })
+    });
+    const json = await res.json();
+    if(json.ok){
+      showToast(`📊 엑셀 동기화 완료 — ${json.sheet} 시트 · ${json.updatedCells}셀 업데이트`);
+    } else {
+      showToast(`⚠️ 엑셀 쓰기 실패: ${json.error}`);
+    }
+  }catch(e){
+    showToast('⚠️ 엑셀 동기화 오류 (서버 연결 확인)');
   }
 }
 
