@@ -59,6 +59,21 @@ app.get('/api/excel-path', (req, res) => {
   res.json({ path: EXCEL_PATH, exists: fs.existsSync(EXCEL_PATH) });
 });
 
+// 엑셀 기계명 목록 확인용 (디버그)
+app.get('/api/excel/machines', (req, res) => {
+  if (!fs.existsSync(EXCEL_PATH)) return res.json({ error: '파일 없음' });
+  try {
+    const wb = XLSX.read(fs.readFileSync(EXCEL_PATH), { type: 'buffer' });
+    const dateSheets = wb.SheetNames.filter(n => /^\d+\.\d+$/.test(n.trim()));
+    const sheetName = dateSheets[dateSheets.length - 1];
+    const rows = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], { header: 1, defval: null });
+    const machines = rows
+      .filter(r => r[0] && typeof r[0] === 'string' && r[0].includes('"') && r[0] !== '기계명')
+      .map(r => r[0]);
+    res.json({ sheet: sheetName, machines });
+  } catch(e) { res.json({ error: e.message }); }
+});
+
 // ── EXCEL 쓰기 API (양방향 동기화) ─────────────────────────────
 app.post('/api/excel/write', (req, res) => {
   if (!fs.existsSync(EXCEL_PATH)) {
