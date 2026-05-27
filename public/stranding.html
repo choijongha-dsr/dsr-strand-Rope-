@@ -1754,7 +1754,12 @@ function parseExcelBuffer(arrayBuffer, source){
             if(old) newId = old.id;
           }
           const rawSt = row[11] ? String(row[11]).trim() : '';
-          const initSt = rawSt==='완' ? 'ST완료' : (STATUS_OPTS.find(s=>s===rawSt)||'대기');
+          const initSt = (()=>{
+            if(!rawSt) return '대기';
+            if(rawSt==='완') return 'ST완료';
+            if(/^IW$/i.test(rawSt)||/^IW완료$/i.test(rawSt)) return 'IW완료';
+            return STATUS_OPTS.find(s=>s.toLowerCase()===rawSt.toLowerCase()) || '대기';
+          })();
 
           newBaseOrders[mId].push({
             id: newId, noGroup: currentNo,
