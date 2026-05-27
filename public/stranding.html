@@ -173,6 +173,15 @@ select.status-sel:focus{outline:none;border-color:var(--blue2);}
 select.status-sel.s-done{background:#e8f8f0;border-color:#27ae60;color:#1e6e3a;font-weight:700;}
 select.status-sel.s-prog{background:#fff8e1;border-color:var(--amber2);color:#7a5800;font-weight:700;}
 select.status-sel.s-iw{background:#eff6ff;border-color:var(--blue2);color:#1565c0;}
+.section-hdr td{
+  padding:7px 12px;font-size:12px;font-weight:800;letter-spacing:0.3px;
+  position:sticky;top:103px;z-index:10;
+}
+.section-hdr-iw td{background:#e3f0ff;color:#1255a0;border-left:4px solid var(--blue2);}
+.section-hdr-st td{background:#e8f8ef;color:#155a2e;border-left:4px solid var(--green2);}
+.section-cnt{font-size:11px;font-weight:700;padding:1px 7px;border-radius:10px;margin-left:6px;}
+.section-hdr-iw .section-cnt{background:#c0d9f8;color:#1255a0;}
+.section-hdr-st .section-cnt{background:#b7e8c8;color:#155a2e;}
 .col-wire{width:108px;font-size:10.5px;color:var(--muted);text-align:center;}
 .col-notes{min-width:120px;font-size:10.5px;color:var(--muted);line-height:1.4;}
 .col-date{width:42px;text-align:center;font-size:11px;color:var(--muted);}
@@ -1470,14 +1479,25 @@ function renderTable(){
     return;
   }
 
-  let rows = '';
+  const IW_STATUSES = ['대기','IW완료'];
+  const COL_COUNT = 17;
+
+  // 오더를 noGroup 단위로 묶기
+  const groups = [];
   for(let i=0; i<orders.length;){
     const group = orders[i].noGroup || orders[i].id;
     let span = 1;
     while(i+span < orders.length && (orders[i+span].noGroup||orders[i+span].id) === group) span++;
+    groups.push(orders.slice(i, i+span));
+    i += span;
+  }
 
-    for(let j=0; j<span; j++){
-      const o = orders[i+j];
+  function renderGroupRows(groupOrders, globalIdx){
+    const span = groupOrders.length;
+    const group = groupOrders[0].noGroup || groupOrders[0].id;
+    const isMultiLayer = span > 1 && MULTILAYER_MACHINES.includes(currentMachine);
+    let html = '';
+    groupOrders.forEach((o, j) => {
       const s = getOrderState(o);
       const day   = s.day   !== null ? s.day   : '';
       const night = s.night !== null ? s.night : '';
@@ -1486,11 +1506,9 @@ function renderTable(){
       const saved = prodData[o.id] || {};
       const actualQty = saved.qty !== undefined ? saved.qty : o.qty;
       const remain    = actualQty > 0 ? actualQty - dayN - nightN : null;
-      const isDone      = s.status === '완료';
-      const layerVal    = saved.layer !== undefined ? saved.layer : (o.layer || '');
-      const isMultiLayer = span > 1 && MULTILAYER_MACHINES.includes(currentMachine);
-      const layerBadge  = layerVal
-        ? `<span class="layer-badge layer-${layerVal}">${layerVal}</span>` : '';
+      const isDone    = s.status === '완료';
+      const layerVal  = saved.layer !== undefined ? saved.layer : (o.layer || '');
+      const layerBadge = layerVal ? `<span class="layer-badge layer-${layerVal}">${layerVal}</span>` : '';
       const scls = s.status==='완료'?'s-done':
                    ['ST진행','ST완료','중층완료','1챠지완'].includes(s.status)?'s-prog':
                    s.status==='IW완료'?'s-iw':'';
@@ -1498,32 +1516,23 @@ function renderTable(){
       if(s.status && !opts.includes(s.status)) opts.push(s.status);
       opts.push('직접입력...');
       const sopts = opts.map(v=>`<option value="${v}" ${v===s.status?'selected':''}>${v}</option>`).join('');
-
       let remHtml = '<span class="remain-zero">-</span>';
       if(remain !== null){
         remHtml = remain <= 0
           ? `<span class="remain-zero">✓ 완료</span>`
           : `<span class="remain-pos">${remain.toLocaleString()}m</span>`;
       }
-
       let noCell = '';
       if(j === 0){
         noCell = `<td class="col-no" rowspan="${span}" style="border-right:1px solid var(--border);vertical-align:middle;background:${isMultiLayer?'#f0f4ff':'#f8faff'};text-align:center;">
-          <span class="no-link" onclick="openWorkReport('${group}')" title="작업일보 작성">${o.noGroup||(i+1)}</span>
+          <span class="no-link" onclick="openWorkReport('${group}')" title="작업일보 작성">${o.noGroup||(globalIdx+1)}</span>
           ${isMultiLayer?`<div style="font-size:9px;color:var(--blue);margin-top:3px;font-weight:700;">다층연<br>${span}층</div>`:''}
         </td>`;
       }
-
-      // 다층연 행 배경 구분 (짝수/홀수 층)
-      const layerBg = isMultiLayer && layerVal
-        ? (j%2===0?'background:#fafbff;':'background:#f5f7fc;') : '';
-
-      rows += `<tr class="${isDone?'done-row':''}" data-id="${o.id}" style="${layerBg}">
+      const layerBg = isMultiLayer && layerVal ? (j%2===0?'background:#fafbff;':'background:#f5f7fc;') : '';
+      html += `<tr class="${isDone?'done-row':''}" data-id="${o.id}" style="${layerBg}">
         ${noCell}
-        <td class="col-proc">
-          ${layerBadge}
-          <div class="proc-main">${o.proc}</div>
-        </td>
+        <td class="col-proc">${layerBadge}<div class="proc-main">${o.proc}</div></td>
         <td class="col-출고">${o.출고||''}</td>
         <td class="col-drum">${o.d45||''}</td>
         <td class="col-drum">${o.d36||''}</td>
@@ -1561,8 +1570,21 @@ function renderTable(){
           <select class="status-sel ${scls}" onchange="updateProd('${o.id}','status',this.value)">${sopts}</select>
         </td>
       </tr>`;
-    }
-    i += span;
+    });
+    return html;
+  }
+
+  const iwGroups = groups.filter(g => IW_STATUSES.includes(getOrderState(g[0]).status));
+  const stGroups = groups.filter(g => !IW_STATUSES.includes(getOrderState(g[0]).status));
+
+  let rows = '';
+  if(iwGroups.length){
+    rows += `<tr class="section-hdr section-hdr-iw"><td colspan="${COL_COUNT}">🔧 IW 단계<span class="section-cnt">${iwGroups.length}건</span></td></tr>`;
+    iwGroups.forEach((g, i) => { rows += renderGroupRows(g, i); });
+  }
+  if(stGroups.length){
+    rows += `<tr class="section-hdr section-hdr-st"><td colspan="${COL_COUNT}">⚙️ ST 단계<span class="section-cnt">${stGroups.length}건</span></td></tr>`;
+    stGroups.forEach((g, i) => { rows += renderGroupRows(g, i); });
   }
 
   el.innerHTML = `<div class="tbl-wrap"><table>
