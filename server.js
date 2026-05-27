@@ -126,7 +126,7 @@ app.post('/api/excel/write', (req, res) => {
         if (pd.day   != null) setCell(ri, 9,  Number(pd.day),   'n');
         if (pd.night != null) setCell(ri, 10, Number(pd.night), 'n');
         if (pd.status != null) {
-          const stVal = pd.status === '완료' ? '완' : pd.status;
+          const stVal = pd.status === 'ST완료' ? '완' : pd.status;
           setCell(ri, 11, stVal, 's');
         }
       }
