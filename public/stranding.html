@@ -186,6 +186,7 @@ select.status-sel.s-iw{background:#eff6ff;border-color:var(--blue2);color:#1565c
 .col-notes{min-width:120px;font-size:10.5px;color:var(--muted);line-height:1.4;}
 .col-date{width:42px;text-align:center;font-size:11px;color:var(--muted);}
 .col-ratio{width:44px;text-align:center;font-size:11px;color:var(--muted);}
+.층-badge{display:inline-block;padding:1px 5px;border-radius:3px;font-size:10px;font-weight:800;color:#fff;background:#607d8b;margin-right:4px;vertical-align:middle;letter-spacing:0.5px;}
 .layer-badge{display:inline-block;padding:2px 6px;border-radius:4px;font-size:11px;font-weight:700;color:#fff;margin-bottom:3px;margin-right:3px;}
 .layer-상층{background:#3f51b5;}
 .layer-중상층{background:#00bcd4;}
@@ -511,21 +512,21 @@ function detectLayer(s){
 }
 
 const MACHINES = [
-  {id:'m1',  name:'16"x35B',   target:50000},
-  {id:'m2',  name:'12"X36B-1', target:50000},
-  {id:'m3',  name:'12"X36B-2', target:50000},
-  {id:'m4',  name:'12"x25B-1', target:50000},
-  {id:'m5',  name:'12"x35B-2', target:50000},
-  {id:'m6',  name:'12"x42B',   target:50000},
-  {id:'m7',  name:'10"x35B',   target:50000},
-  {id:'m8',  name:'8"x36B',    target:50000},
-  {id:'m9',  name:'12"x6B',    target:50000},
-  {id:'m10', name:'14"X6B',    target:50000},
-  {id:'m11', name:'16"X6B',    target:50000},
-  {id:'m12', name:'10"X6B-2',  target:50000},
-  {id:'m13', name:'12"x9B',    target:50000},
-  {id:'m14', name:'14"X18B',   target:50000},
-  {id:'m15', name:'24"X6B-2',  target:50000}
+  {id:'m1',  name:'16"x35B',   target:50000, drums:['45','36','30']},
+  {id:'m2',  name:'12"X36B-1', target:50000, drums:['45','36','30']},
+  {id:'m3',  name:'12"X36B-2', target:50000, drums:['45','36','30']},
+  {id:'m4',  name:'12"x25B-1', target:50000, drums:['45','36','30']},
+  {id:'m5',  name:'12"x35B-2', target:50000, drums:['45','36','30']},
+  {id:'m6',  name:'12"x42B',   target:50000, drums:['45','36','30']},
+  {id:'m7',  name:'10"x35B',   target:50000, drums:['45','36','30']},
+  {id:'m8',  name:'8"x36B',    target:50000, drums:['45','36','30']},
+  {id:'m9',  name:'12"x6B',    target:50000, drums:['30','24','21']},
+  {id:'m10', name:'14"X6B',    target:50000, drums:['30','24','21']},
+  {id:'m11', name:'16"X6B',    target:50000, drums:['30','24','21']},
+  {id:'m12', name:'10"X6B-2',  target:50000, drums:['24','21','14']},
+  {id:'m13', name:'12"x9B',    target:50000, drums:['45','36','30']},
+  {id:'m14', name:'14"X18B',   target:50000, drums:['45','36','30']},
+  {id:'m15', name:'24"X6B-2',  target:50000, drums:['24','21','14']}
 ];
 
 let currentMachine = 'all';
@@ -1480,6 +1481,7 @@ function renderTable(){
   }
 
   const IW_STATUSES = ['대기','IW완료'];
+  const drums = m.drums || ['45','36','30'];
   const COL_COUNT = 17;
 
   // 오더를 noGroup 단위로 묶기
@@ -1532,7 +1534,7 @@ function renderTable(){
       const layerBg = isMultiLayer && layerVal ? (j%2===0?'background:#fafbff;':'background:#f5f7fc;') : '';
       html += `<tr class="${isDone?'done-row':''}" data-id="${o.id}" style="${layerBg}">
         ${noCell}
-        <td class="col-proc">${layerBadge}<div class="proc-main">${o.proc}</div></td>
+        <td class="col-proc">${o.층?`<span class="층-badge">${o.층}</span>`:''} ${layerBadge}<div class="proc-main">${o.proc}</div></td>
         <td class="col-출고">${o.출고||''}</td>
         <td class="col-drum">${o.d45||''}</td>
         <td class="col-drum">${o.d36||''}</td>
@@ -1574,8 +1576,10 @@ function renderTable(){
     return html;
   }
 
-  const iwGroups = groups.filter(g => IW_STATUSES.includes(getOrderState(g[0]).status));
-  const stGroups = groups.filter(g => !IW_STATUSES.includes(getOrderState(g[0]).status));
+  const iwrcGroups   = groups.filter(g => /IW$/i.test(String(g[0].noGroup||'')));
+  const regularGroups = groups.filter(g => !/IW$/i.test(String(g[0].noGroup||'')));
+  const iwGroups = regularGroups.filter(g => IW_STATUSES.includes(getOrderState(g[0]).status));
+  const stGroups = regularGroups.filter(g => !IW_STATUSES.includes(getOrderState(g[0]).status));
 
   let rows = '';
   if(iwGroups.length){
@@ -1586,15 +1590,19 @@ function renderTable(){
     rows += `<tr class="section-hdr section-hdr-st"><td colspan="${COL_COUNT}">⚙️ ST 단계<span class="section-cnt">${stGroups.length}건</span></td></tr>`;
     stGroups.forEach((g, i) => { rows += renderGroupRows(g, i); });
   }
+  if(iwrcGroups.length){
+    rows += `<tr class="section-hdr" style="background:#fff3e0;color:#bf360c;border-left:4px solid #ff6d00;"><td colspan="${COL_COUNT}" style="background:#fff3e0;color:#bf360c;">🔩 IWRC 작업<span class="section-cnt" style="background:#ffe0b2;color:#bf360c;">${iwrcGroups.length}건</span></td></tr>`;
+    iwrcGroups.forEach((g, i) => { rows += renderGroupRows(g, i); });
+  }
 
   el.innerHTML = `<div class="tbl-wrap"><table>
     <thead><tr>
       <th class="col-no">No</th>
       <th class="col-proc">공정 및 작업 길이</th>
       <th class="col-출고">출고</th>
-      <th class="col-drum">45</th>
-      <th class="col-drum">36</th>
-      <th class="col-drum">30</th>
+      <th class="col-drum">${drums[0]}</th>
+      <th class="col-drum">${drums[1]}</th>
+      <th class="col-drum">${drums[2]}</th>
       <th class="col-qty">총량</th>
       <th class="col-input">생산(주)</th>
       <th class="col-input">생산(야)</th>
@@ -1783,10 +1791,12 @@ function parseExcelBuffer(arrayBuffer, source){
             return STATUS_OPTS.find(s=>s.toLowerCase()===rawSt.toLowerCase()) || '대기';
           })();
 
+          const 층Val = row[4] ? String(row[4]).trim() : '';
           newBaseOrders[mId].push({
             id: newId, noGroup: currentNo,
             proc:      specStr,
             layer:     layerName,
+            층:        /^[상중하]$/.test(층Val) ? 층Val : '',
             출고:       row[3]  ? String(row[3]).trim()  : '',
             d45:       row[5]  ? String(row[5]).trim()  : '',
             d36:       row[6]  ? String(row[6]).trim()  : '',
