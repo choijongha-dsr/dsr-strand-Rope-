@@ -1947,7 +1947,7 @@ function openWorkReport(initialGroupKey=null){
           <button class="modal-close" onclick="closeWorkReport()">✕</button>
         </div>
       </div>
-      <div class="modal-body" style="padding:10px 14px;background:#eef1f5;flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;">
+      <div class="modal-body" style="padding:10px 14px;background:#eef1f5;flex:1;overflow-y:auto;overflow-x:auto;-webkit-overflow-scrolling:touch;">
 
         <!-- 오더 선택 바 (터치 최적화) -->
         <div style="background:#fff;border-radius:12px;padding:12px 14px;margin-bottom:10px;
@@ -1972,7 +1972,7 @@ function openWorkReport(initialGroupKey=null){
         </div>
 
         <!-- ① 타이틀 + 기본정보 카드 -->
-        <div style="background:#fff;border-radius:12px;border:2px solid #222;overflow:hidden;">
+        <div style="background:#fff;border-radius:12px;border:2px solid #222;">
           <!-- 타이틀 행 -->
           <div style="display:flex;align-items:stretch;border-bottom:2px solid #222;">
             <div style="flex:1;text-align:center;font-size:22px;font-weight:900;letter-spacing:6px;
@@ -2019,7 +2019,7 @@ function openWorkReport(initialGroupKey=null){
           </div>
 
           <!-- 기계명/작업자 행 -->
-          <div style="display:flex;align-items:center;min-height:50px;">
+          <div style="display:flex;align-items:center;min-height:50px;flex-wrap:wrap;">
             <div style="background:#d0d0d0;font-weight:800;font-size:14px;text-align:center;padding:0 10px;border-right:2px solid #222;min-height:50px;display:flex;align-items:center;">기계명</div>
             <div style="padding:0 12px;font-size:16px;font-weight:900;color:#0f2744;border-right:2px solid #222;min-height:50px;display:flex;align-items:center;min-width:80px;">${m.name}</div>
             <div style="background:#d0d0d0;font-weight:800;font-size:14px;text-align:center;padding:0 10px;border-right:2px solid #222;min-height:50px;display:flex;align-items:center;">작업자</div>
@@ -2032,8 +2032,8 @@ function openWorkReport(initialGroupKey=null){
         </div>
 
         <!-- ② 작업내역 표 카드 -->
-        <div style="background:#fff;border-radius:12px;overflow:hidden;border:2px solid #222;">
-          <div style="background:#0f2744;color:#fff;padding:10px 14px;font-size:14px;font-weight:800;letter-spacing:1px;">📋 작업 내역</div>
+        <div style="background:#fff;border-radius:12px;border:2px solid #222;">
+          <div style="background:#0f2744;color:#fff;padding:10px 14px;font-size:14px;font-weight:800;letter-spacing:1px;border-radius:10px 10px 0 0;">📋 작업 내역</div>
           <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">
             <table style="width:100%;min-width:600px;border-collapse:collapse;" id="wr-ord-table">
               <colgroup>
@@ -2067,8 +2067,8 @@ function openWorkReport(initialGroupKey=null){
         </div>
 
         <!-- ③ 불가동 요인 카드 -->
-        <div style="background:#fff;border-radius:12px;overflow:hidden;border:2px solid #222;">
-          <div style="background:#0f2744;color:#fff;padding:10px 14px;font-size:14px;font-weight:800;">⚠️ 불가동 요인</div>
+        <div style="background:#fff;border-radius:12px;border:2px solid #222;">
+          <div style="background:#0f2744;color:#fff;padding:10px 14px;font-size:14px;font-weight:800;border-radius:10px 10px 0 0;">⚠️ 불가동 요인</div>
           <div style="padding:12px 16px;">
             <div style="font-size:14px;color:#333;margin-bottom:10px;">① 인원부족 &nbsp; ② 재료대기 &nbsp; ③ 기계고장 &nbsp; ④ 공정변경 &nbsp; ⑤ 사고처리</div>
             <div style="display:flex;align-items:center;gap:10px;">
@@ -2080,8 +2080,8 @@ function openWorkReport(initialGroupKey=null){
         </div>
 
         <!-- ④ 시간별 발생내역 카드 -->
-        <div style="background:#fff;border-radius:12px;overflow:hidden;border:2px solid #222;">
-          <div style="background:#0f2744;color:#fff;padding:10px 14px;font-size:14px;font-weight:800;">🕐 시간별 발생내역</div>
+        <div style="background:#fff;border-radius:12px;border:2px solid #222;">
+          <div style="background:#0f2744;color:#fff;padding:10px 14px;font-size:14px;font-weight:800;border-radius:10px 10px 0 0;">🕐 시간별 발생내역</div>
           <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">
             <table style="border-collapse:collapse;min-width:900px;">
               <thead>
@@ -2101,17 +2101,46 @@ function openWorkReport(initialGroupKey=null){
         </div>
 
         <!-- ⑤ 단선내역 카드 -->
-        <div style="background:#fff;border-radius:12px;overflow:hidden;border:2px solid #222;">
-          <div style="background:#0f2744;color:#fff;padding:10px 14px;font-size:14px;font-weight:800;">✂️ 단선 내역 및 시편 첨부</div>
+        <div style="background:#fff;border-radius:12px;border:2px solid #222;">
+          <div style="background:#0f2744;color:#fff;padding:10px 14px;font-size:14px;font-weight:800;border-radius:10px 10px 0 0;">✂️ 단선 내역 및 시편 첨부</div>
           <div style="padding:10px 14px;">
             <textarea id="wr-wb" placeholder="단선 내역을 입력하세요..."
               style="width:100%;height:80px;border:2px solid #dde2ea;border-radius:8px;outline:none;font-size:15px;resize:none;font-family:inherit;padding:10px;touch-action:manipulation;"></textarea>
           </div>
         </div>
 
+        <!-- ⑤-b 소선 DIA(mm) 카드 -->
+        <div style="background:#fff;border-radius:12px;border:2px solid #222;">
+          <div style="background:#0f2744;color:#fff;padding:10px 14px;font-size:14px;font-weight:800;border-radius:10px 10px 0 0;">🔬 소선 DIA(mm)</div>
+          <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">
+            <table style="border-collapse:collapse;width:100%;min-width:520px;">
+              <colgroup><col style="width:80px"><col><col><col><col><col><col style="width:12px"><col><col><col><col><col></colgroup>
+              <tr>
+                <td rowspan="2" style="border:1.5px solid #555;background:#d0d0d0;font-weight:700;text-align:center;font-size:12px;padding:4px;vertical-align:middle;">소 선<br>DIA(mm)</td>
+                <th style="border:1.5px solid #555;background:#dce8f0;font-size:11px;font-weight:700;text-align:center;padding:3px;">d0</th>
+                <th style="border:1.5px solid #555;background:#dce8f0;font-size:11px;font-weight:700;text-align:center;padding:3px;">d1</th>
+                <th style="border:1.5px solid #555;background:#dce8f0;font-size:11px;font-weight:700;text-align:center;padding:3px;">dw,df</th>
+                <th style="border:1.5px solid #555;background:#dce8f0;font-size:11px;font-weight:700;text-align:center;padding:3px;">ds</th>
+                <th style="border:1.5px solid #555;background:#dce8f0;font-size:11px;font-weight:700;text-align:center;padding:3px;">d2</th>
+                <td style="background:#bbb;border-top:1.5px solid #555;border-bottom:1.5px solid #555;"></td>
+                <th style="border:1.5px solid #555;background:#dce8f0;font-size:11px;font-weight:700;text-align:center;padding:3px;">d0</th>
+                <th style="border:1.5px solid #555;background:#dce8f0;font-size:11px;font-weight:700;text-align:center;padding:3px;">d1</th>
+                <th style="border:1.5px solid #555;background:#dce8f0;font-size:11px;font-weight:700;text-align:center;padding:3px;">dw,df</th>
+                <th style="border:1.5px solid #555;background:#dce8f0;font-size:11px;font-weight:700;text-align:center;padding:3px;">ds</th>
+                <th style="border:1.5px solid #555;background:#dce8f0;font-size:11px;font-weight:700;text-align:center;padding:3px;">d2</th>
+              </tr>
+              <tr>
+                ${['o1d0','o1d1','o1dwdf','o1ds','o1d2'].map(k=>`<td style="border:1.5px solid #555;padding:0;"><input type="number" class="wr-sd" data-k="${k}" step="0.001" style="width:100%;border:none;outline:none;font-size:13px;text-align:center;background:transparent;padding:4px;min-height:36px;touch-action:manipulation;"></td>`).join('')}
+                <td style="background:#bbb;border-top:1.5px solid #555;border-bottom:1.5px solid #555;"></td>
+                ${['o2d0','o2d1','o2dwdf','o2ds','o2d2'].map(k=>`<td style="border:1.5px solid #555;padding:0;"><input type="number" class="wr-sd" data-k="${k}" step="0.001" style="width:100%;border:none;outline:none;font-size:13px;text-align:center;background:transparent;padding:4px;min-height:36px;touch-action:manipulation;"></td>`).join('')}
+              </tr>
+            </table>
+          </div>
+        </div>
+
         <!-- ⑥ 보빈 검사표 카드 -->
-        <div style="background:#fff;border-radius:12px;overflow:hidden;border:2px solid #222;">
-          <div style="background:#0f2744;color:#fff;padding:10px 14px;font-size:14px;font-weight:800;">🔍 보빈 검사표</div>
+        <div style="background:#fff;border-radius:12px;border:2px solid #222;">
+          <div style="background:#0f2744;color:#fff;padding:10px 14px;font-size:14px;font-weight:800;border-radius:10px 10px 0 0;">🔍 보빈 검사표</div>
           <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">
             <table style="border-collapse:collapse;min-width:700px;width:100%;">
               <thead>
@@ -2127,8 +2156,8 @@ function openWorkReport(initialGroupKey=null){
         </div>
 
         <!-- ⑦ 환경정리상태 카드 -->
-        <div style="background:#fff;border-radius:12px;overflow:hidden;border:2px solid #222;">
-          <div style="background:#0f2744;color:#fff;padding:10px 14px;font-size:14px;font-weight:800;">🌿 환경정리상태 (3정5S)</div>
+        <div style="background:#fff;border-radius:12px;border:2px solid #222;">
+          <div style="background:#0f2744;color:#fff;padding:10px 14px;font-size:14px;font-weight:800;border-radius:10px 10px 0 0;">🌿 환경정리상태 (3정5S)</div>
           <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0;">
             <div style="padding:14px 10px;text-align:center;border-right:2px solid #e0e0e0;">
               <div style="font-size:13px;font-weight:800;color:#333;margin-bottom:10px;">🏭 급선대 및 주변</div>
