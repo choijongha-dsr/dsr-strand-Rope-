@@ -959,7 +959,36 @@ function renderIlbo(){
       </table>
       </div>
 
-      <!-- ⑥ 불가동 요인 -->
+      <!-- ⑥ 소선 DIA(mm) -->
+      <table class="ilt">
+        <colgroup>
+          <col style="width:62px">
+          <col><col><col><col><col>
+          <col style="width:14px">
+          <col><col><col><col><col>
+        </colgroup>
+        <tr>
+          <td rowspan="2" class="illbl" style="font-size:11px;line-height:1.6;letter-spacing:1px;">소 선<br>DIA(mm)</td>
+          <th class="ilsdh">d0</th><th class="ilsdh">d1</th><th class="ilsdh">dw,df</th><th class="ilsdh">ds</th><th class="ilsdh">d2</th>
+          <td style="background:#ccc;border-top:1px solid #333;border-bottom:1px solid #333;"></td>
+          <th class="ilsdh">d0</th><th class="ilsdh">d1</th><th class="ilsdh">dw,df</th><th class="ilsdh">ds</th><th class="ilsdh">d2</th>
+        </tr>
+        <tr>
+          <td><input type="number" class="il-sd" data-k="o1d0"   step="0.001" oninput="ilMarkDirty()"></td>
+          <td><input type="number" class="il-sd" data-k="o1d1"   step="0.001" oninput="ilMarkDirty()"></td>
+          <td><input type="number" class="il-sd" data-k="o1dwdf" step="0.001" oninput="ilMarkDirty()"></td>
+          <td><input type="number" class="il-sd" data-k="o1ds"   step="0.001" oninput="ilMarkDirty()"></td>
+          <td><input type="number" class="il-sd" data-k="o1d2"   step="0.001" oninput="ilMarkDirty()"></td>
+          <td style="background:#ccc;border-top:1px solid #333;border-bottom:1px solid #333;"></td>
+          <td><input type="number" class="il-sd" data-k="o2d0"   step="0.001" oninput="ilMarkDirty()"></td>
+          <td><input type="number" class="il-sd" data-k="o2d1"   step="0.001" oninput="ilMarkDirty()"></td>
+          <td><input type="number" class="il-sd" data-k="o2dwdf" step="0.001" oninput="ilMarkDirty()"></td>
+          <td><input type="number" class="il-sd" data-k="o2ds"   step="0.001" oninput="ilMarkDirty()"></td>
+          <td><input type="number" class="il-sd" data-k="o2d2"   step="0.001" oninput="ilMarkDirty()"></td>
+        </tr>
+      </table>
+
+      <!-- ⑦ 불가동 요인 -->
       <table class="ilt">
         <colgroup><col style="width:62px"><col></colgroup>
         <tr style="height:46px;">
@@ -1120,34 +1149,13 @@ function ilBuildBobinRows(){
     {r:'rpm',lbl:'RPM',               type:'number'},
     {r:'pit',lbl:'PITCH(핏치)',       type:'number', step:'0.1'},
   ];
-  let html = rows.map(row=>{
+  const html = rows.map(row=>{
     const sa = row.step ? `step="${row.step}"` : '';
     const cells = Array.from({length:12},(_,j)=>
       `<td><input type="${row.type}" class="il-bb" data-r="${row.r}" data-n="${j+1}" ${sa} oninput="ilMarkDirty()"></td>`
     ).join('');
     return `<tr><td class="illbl" style="font-size:10.5px;">${row.lbl}</td>${cells}</tr>`;
   }).join('');
-  // 소선 DIA(mm) — 보빈 테이블 하단에 통합 (PDF 형식)
-  html += `<tr>
-    <td class="illbl" rowspan="2" style="font-size:11px;line-height:1.4;">소 선<br>DIA(mm)</td>
-    <th class="ilsdh">d0</th><th class="ilsdh">d1</th><th class="ilsdh">dw,df</th><th class="ilsdh">ds</th><th class="ilsdh">d2</th>
-    <td style="background:#f0f0f0;"></td>
-    <th class="ilsdh">d0</th><th class="ilsdh">d1</th><th class="ilsdh">dw,df</th><th class="ilsdh">ds</th><th class="ilsdh">d2</th>
-    <td style="background:#f0f0f0;"></td>
-  </tr><tr>
-    <td><input type="number" class="il-sd" data-k="o1d0"   step="0.001" oninput="ilMarkDirty()"></td>
-    <td><input type="number" class="il-sd" data-k="o1d1"   step="0.001" oninput="ilMarkDirty()"></td>
-    <td><input type="number" class="il-sd" data-k="o1dwdf" step="0.001" oninput="ilMarkDirty()"></td>
-    <td><input type="number" class="il-sd" data-k="o1ds"   step="0.001" oninput="ilMarkDirty()"></td>
-    <td><input type="number" class="il-sd" data-k="o1d2"   step="0.001" oninput="ilMarkDirty()"></td>
-    <td style="background:#f0f0f0;"></td>
-    <td><input type="number" class="il-sd" data-k="o2d0"   step="0.001" oninput="ilMarkDirty()"></td>
-    <td><input type="number" class="il-sd" data-k="o2d1"   step="0.001" oninput="ilMarkDirty()"></td>
-    <td><input type="number" class="il-sd" data-k="o2dwdf" step="0.001" oninput="ilMarkDirty()"></td>
-    <td><input type="number" class="il-sd" data-k="o2ds"   step="0.001" oninput="ilMarkDirty()"></td>
-    <td><input type="number" class="il-sd" data-k="o2d2"   step="0.001" oninput="ilMarkDirty()"></td>
-    <td style="background:#f0f0f0;"></td>
-  </tr>`;
   tbody.innerHTML = html;
 }
 
