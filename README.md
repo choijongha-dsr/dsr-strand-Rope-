@@ -1,2 +1,16 @@
-# dsr-strand-Rope-
-dsr strand일보,Rope일보,연성공정표 자동화
+# 감면율 계산기 (DSR 제강 1공장)
+
+와이어 신선 공정 감면율 / 패스 스케줄 계산기 — PWA(홈 화면 설치 가능)
+
+## 배포 (GitHub Pages)
+1. 이 폴더 전체를 새 GitHub 레포지토리에 push
+2. 레포지토리 Settings → Pages → Source를 `main` 브랜치 `/ (root)`로 설정
+3. 잠시 후 `https://<계정명>.github.io/<레포명>/` 주소로 접속 가능
+4. 휴대폰 브라우저로 해당 주소 접속 → 메뉴에서 "홈 화면에 추가"
+
+## 업데이트 방법
+1. `index.html`을 고친 뒤, **`sw.js` 안의 `CACHE_VERSION` 숫자를 하나 올리기** (예: v2 → v3)
+   - 이 버전을 안 올리면 휴대폰이 예전 캐시를 계속 보여줄 수 있습니다.
+2. 레포지토리에서 `Add file → Upload files`로 `index.html`과 `sw.js`를 같이 올려서 덮어쓰기
+3. 휴대폰에서 앱을 껐다 켜면 자동으로 새 버전을 받아오고 한 번 새로고침됩니다 (수동으로 캐시 지울 필요 없음)
+

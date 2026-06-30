@@ -1,0 +1,966 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>감면율 계산기 — DSR 제강</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1a4f8a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="감면율계산기">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" href="icon-192.png">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #f7f6f3; --surface: #ffffff; --surface2: #f0eeea;
+    --border: #e0ddd6; --border2: #ccc9c0;
+    --text: #1a1917; --text2: #6b6860; --text3: #9e9b94;
+    --accent: #1a4f8a; --accent-light: #e8eef6; --accent-mid: #3068a8;
+    --danger: #c0392b; --danger-light: #fdf0ee;
+    --warn: #b5630c; --warn-light: #fef6ec;
+    --ok: #1e6e45; --ok-light: #edf7f1;
+    --mono: 'Courier New', Courier, monospace;
+  }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; font-size: 14px; line-height: 1.5; }
+  header { background: var(--accent); color: #fff; padding: 14px 24px; display: flex; align-items: center; gap: 12px; }
+  header h1 { font-size: 15px; font-weight: 600; letter-spacing: 0.02em; }
+  header span { font-size: 12px; opacity: 0.65; margin-left: auto; }
+  .container { max-width: 960px; margin: 0 auto; padding: 24px 16px; }
+  .tabs { display: flex; border-bottom: 2px solid var(--border); margin-bottom: 24px; }
+  .tab { background: none; border: none; padding: 10px 20px; font-size: 14px; font-weight: 500; color: var(--text2); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px; transition: color 0.15s; }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 600px) { .grid { grid-template-columns: 1fr; } }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 20px; }
+  .card-title { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text3); margin-bottom: 16px; }
+  .card-title-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+  .card-title-row .tool-btn { font-size: 11px; padding: 4px 10px; }
+  .field { margin-bottom: 14px; }
+  .field label { display: block; font-size: 12px; color: var(--text2); margin-bottom: 5px; font-weight: 500; }
+  .field input[type=number] { width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 5px; font-size: 14px; font-family: var(--mono); background: var(--surface); color: var(--text); transition: border-color 0.15s; outline: none; }
+  .field input[type=number]:focus { border-color: var(--accent-mid); }
+  .field input[type=number]::-webkit-inner-spin-button { opacity: 0.4; }
+  .machine-btns { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+  .mb { padding: 5px 14px; font-size: 12px; font-weight: 500; border: 1px solid var(--border2); border-radius: 5px; background: var(--surface); color: var(--text2); cursor: pointer; transition: all 0.15s; }
+  .mb:hover { background: var(--surface2); }
+  .mb.active { background: var(--accent-light); color: var(--accent); border-color: var(--accent-mid); }
+  .results-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 16px; }
+  @media (max-width: 480px) { .results-grid { grid-template-columns: 1fr 1fr; } }
+  .metric { background: var(--surface2); border-radius: 6px; padding: 12px; }
+  .metric-label { font-size: 11px; color: var(--text3); margin-bottom: 4px; }
+  .metric-value { font-size: 18px; font-weight: 600; font-family: var(--mono); color: var(--text); }
+  .metric-unit { font-size: 11px; font-weight: 400; color: var(--text2); margin-left: 2px; }
+  .metric.highlight { background: var(--accent-light); }
+  .metric.highlight .metric-value { color: var(--accent); }
+  .metric.danger-m { background: var(--danger-light); }
+  .metric.danger-m .metric-value { color: var(--danger); }
+  .limit-box { margin-top: 14px; padding: 12px 14px; border-radius: 6px; font-size: 13px; border: 1px solid; }
+  .limit-box.ok { background: var(--ok-light); border-color: #b8ddc9; color: var(--ok); }
+  .limit-box.warn { background: var(--warn-light); border-color: #f5d7b3; color: var(--warn); }
+  .limit-box.danger { background: var(--danger-light); border-color: #f5c6c2; color: var(--danger); }
+  .limit-box .lb-title { font-weight: 600; font-size: 14px; margin-bottom: 4px; }
+  .limit-box .lb-sub { font-size: 12px; opacity: 0.8; }
+  .divider { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
+  .pass-summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 20px; }
+  @media (max-width: 600px) { .pass-summary { grid-template-columns: 1fr 1fr; } }
+  .pass-table-wrap { overflow-x: auto; }
+
+  /* 모바일 카드뷰 (≤640px에서 테이블 대신 표시) */
+  .pass-cards { display: none; }
+  @media (max-width: 640px) {
+    .pass-table-wrap { display: none; }
+    .pass-cards { display: block; }
+  }
+  .pass-card {
+    border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; margin-bottom: 10px; background: var(--surface);
+  }
+  .pass-card.over { border-color: #f0b8b0; background: var(--danger-light); }
+  .pass-card-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+  .pass-card-num { font-size: 13px; font-weight: 600; color: var(--text2); }
+  .pass-card-del { border: none; background: none; color: var(--text3); font-size: 16px; padding: 2px 6px; cursor: pointer; }
+  .pass-card-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 6px; }
+  .pass-card-label { font-size: 12px; color: var(--text3); white-space: nowrap; }
+  .pass-card-row input[type=number] {
+    width: 110px; padding: 6px 8px; border: 1px solid var(--border); border-radius: 5px;
+    font-size: 14px; font-family: var(--mono); text-align: right; background: var(--surface); color: var(--text);
+  }
+  .pass-card-stat { font-size: 12px; color: var(--text2); font-family: var(--mono); }
+  .pass-card-bar { height: 6px; border-radius: 3px; background: var(--accent-light); margin-top: 2px; }
+  .pass-card-bar-fill { height: 100%; border-radius: 3px; }
+  .pass-card-lock { font-size: 11px; color: var(--accent); background: var(--accent-light); padding: 2px 8px; border-radius: 4px; }
+  .die-stepper { display: flex; align-items: center; gap: 6px; }
+  .die-stepper input[type=number] { width: 90px; text-align: center; }
+  .die-step-btn {
+    width: 32px; height: 32px; border: 1px solid var(--border2); border-radius: 6px;
+    background: var(--surface2); color: var(--text); font-size: 16px; font-weight: 600;
+    cursor: pointer; display: flex; align-items: center; justify-content: center; line-height: 1; flex-shrink: 0;
+  }
+  .die-step-btn:active { background: var(--accent-light); }
+  .die-step-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; padding: 8px 10px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text3); border-bottom: 1px solid var(--border); white-space: nowrap; }
+  td { padding: 5px 8px; border-bottom: 1px solid var(--border); font-family: var(--mono); font-size: 13px; }
+  tr:last-child td { border-bottom: none; }
+  .pass-num { font-weight: 600; color: var(--text2); font-family: sans-serif; font-size: 12px; }
+  .badge { display: inline-block; font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 4px; margin-left: 4px; font-family: sans-serif; }
+  .badge-ok { background: var(--ok-light); color: var(--ok); }
+  .badge-warn { background: var(--warn-light); color: var(--warn); }
+  .badge-danger { background: var(--danger-light); color: var(--danger); }
+  .formula-box { background: #1a1917; border-radius: 6px; padding: 12px 16px; margin-bottom: 16px; font-family: var(--mono); font-size: 13px; color: #c8c4bb; line-height: 1.8; }
+
+  /* Dies 검사표 */
+  .dies-table-wrap { overflow-x: auto; }
+  .dies-table { width: 100%; border-collapse: collapse; font-size: 13px; border: 1px solid var(--border2); }
+  .dies-table th, .dies-table td { border: 1px solid var(--border2); padding: 8px 10px; text-align: center; }
+  .dies-table thead th { background: var(--surface2); font-size: 12px; font-weight: 600; color: var(--text2); }
+  .dies-table td.label-cell { background: var(--surface2); font-weight: 500; color: var(--text2); font-size: 12px; white-space: nowrap; }
+  .dies-table td input[type=text] {
+    width: 100%; border: none; background: transparent; text-align: center;
+    font-size: 13px; font-family: inherit; color: var(--text); outline: none; padding: 2px;
+  }
+  .dies-table td input[type=text]:focus { background: var(--accent-light); border-radius: 3px; }
+  .dies-table td.dise-cell { font-family: var(--mono); }
+  .dies-table td.dise-num { font-weight: 600; color: var(--text2); font-family: sans-serif; }
+  .dies-table tr.dies-final-row td { background: var(--accent-light); font-weight: 600; }
+  .dies-table tr.dies-cross td.x-cell { font-size: 16px; color: var(--text3); }
+  .formula-box .fv { color: #7eb8f7; }
+  .formula-box .fo { color: #f0c060; }
+  .formula-box .fc { color: #9ecf9e; }
+  .section-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text3); margin-bottom: 10px; }
+  .empty { color: var(--text3); font-size: 13px; padding: 8px 0; }
+  footer { text-align: center; font-size: 11px; color: var(--text3); padding: 24px 0 16px; }
+
+  /* 패스 테이블 인라인 편집 */
+  .ra-input {
+    width: 72px;
+    padding: 3px 6px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    font-size: 13px;
+    font-family: var(--mono);
+    background: var(--surface);
+    color: var(--text);
+    outline: none;
+    text-align: right;
+  }
+  .ra-input:focus { border-color: var(--accent-mid); background: var(--accent-light); }
+  .ra-input.over { border-color: var(--danger); background: var(--danger-light); }
+  .ra-input.warn { border-color: #e8a040; background: var(--warn-light); }
+  td.computed { color: var(--text2); }
+  tr.row-over td { background: #fff8f7; }
+  .bar-wrap { display: flex; align-items: center; gap: 6px; }
+  .bar { height: 6px; border-radius: 3px; background: var(--accent-light); min-width: 2px; transition: width 0.2s, background 0.2s; }
+  .bar.ok-bar { background: #68c99a; }
+  .bar.warn-bar { background: #f0a040; }
+  .bar.over-bar { background: var(--danger); }
+  .row-actions { display: flex; gap: 4px; }
+  .act-btn { border: none; background: none; cursor: pointer; color: var(--text3); font-size: 14px; padding: 2px 4px; border-radius: 3px; line-height: 1; }
+  .act-btn:hover { color: var(--text); background: var(--surface2); }
+  .toolbar { display: flex; gap: 8px; align-items: center; margin-bottom: 16px; flex-wrap: wrap; }
+  .tool-btn { padding: 5px 12px; font-size: 12px; font-weight: 500; border: 1px solid var(--border2); border-radius: 5px; background: var(--surface); color: var(--text2); cursor: pointer; transition: all 0.15s; }
+  .tool-btn:hover { background: var(--surface2); color: var(--text); }
+  .tool-btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .tool-btn.primary:hover { background: var(--accent-mid); }
+  .remaining-note { font-size: 12px; color: var(--text3); margin-left: auto; }
+  .remaining-note.over-note { color: var(--danger); font-weight: 500; }
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+</head>
+<body>
+
+<header>
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2"/><circle cx="12" cy="12" r="4"/></svg>
+  <h1>감면율 계산기</h1>
+  <span>DSR 제강 1공장</span>
+</header>
+
+<div class="container">
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('single', this)">단순 계산</button>
+    <button class="tab" onclick="switchTab('pass', this)">패스 스케줄</button>
+    <button class="tab" onclick="switchTab('formula', this)">공식 참조</button>
+  </div>
+
+  <!-- 단순 계산 -->
+  <div id="tab-single" class="tab-content active">
+    <div class="grid">
+      <div class="card">
+        <div class="card-title">입력값</div>
+        <div class="field"><label>입선경 d₁ (mm)</label><input type="number" id="d1" value="5.5" step="0.01" min="0.01" oninput="calcSingle()"></div>
+        <div class="field"><label>출선경 d₂ (mm)</label><input type="number" id="d2" value="3.2" step="0.01" min="0.01" oninput="calcSingle()"></div>
+        <hr class="divider">
+        <div class="section-label">기계 유형 / 한계 감면율</div>
+        <div class="machine-btns">
+          <button class="mb active" onclick="setMachine(24, this)">H형 (24%)</button>
+          <button class="mb" onclick="setMachine(17, this)">D형 (17%)</button>
+          <button class="mb" onclick="setMachine(20, this)">20%</button>
+        </div>
+        <div class="field"><label>최대 한계 (%)</label><input type="number" id="limit" value="24" step="0.1" min="1" max="50" oninput="calcSingle()"></div>
+        <div id="limit-result"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">계산 결과</div>
+        <div id="single-results"><div class="empty">값을 입력하면 자동 계산됩니다.</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 패스 스케줄 -->
+  <div id="tab-pass" class="tab-content">
+    <div class="card" style="margin-bottom:16px;">
+      <div class="card-title">조건 설정</div>
+      <div class="grid">
+        <div>
+          <div class="field"><label>중간선경 (mm)</label><input type="number" id="p-d1" value="7.5" step="0.01" min="0.01" oninput="onBaseD1Change()"></div>
+          <div class="field"><label>완선경 (mm)</label><input type="number" id="p-d2" value="2.48" step="0.01" min="0.01" oninput="onTargetD2Change()"></div>
+        </div>
+        <div>
+          <div class="field">
+            <label>초기 패스 수 (자동 배분용)</label>
+            <input type="number" id="p-passes" value="10" step="1" min="1" max="40" oninput="initPass()">
+          </div>
+          <div class="section-label" style="margin-top:4px;">기계 유형 (한계)</div>
+          <div class="machine-btns">
+            <button class="mb active" id="pb-H" onclick="setPassMachine(24, this)">H형 (24%)</button>
+            <button class="mb" id="pb-D" onclick="setPassMachine(17, this)">D형 (17%)</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">패스별 감면율 편집</div>
+      <div class="toolbar">
+        <button class="tool-btn" onclick="addPass()">＋ 패스 추가</button>
+        <button class="tool-btn" onclick="resetPass()">↺ 일반작업</button>
+        <button class="tool-btn" onclick="applyTaperedPass()">📉 고강도작업(테이퍼드 배분)</button>
+        <label style="display:flex; align-items:center; gap:6px; font-size:13px; color:var(--text); cursor:pointer; padding:5px 10px; border-radius:5px; background:var(--accent-light);">
+          <input type="checkbox" id="lock-final" checked onchange="toggleLockFinal()" style="width:15px;height:15px;cursor:pointer;">
+          🔒 완선경 고정 (마지막 패스 = 완선경 항상 유지)
+        </label>
+        <span class="remaining-note" id="remaining-note"></span>
+      </div>
+      <div class="pass-summary" id="pass-summary"></div>
+      <div id="feed-note" style="font-size:13px; color:var(--text2); margin-bottom:10px; padding:8px 12px; background:var(--surface2); border-radius:6px;"></div>
+      <div class="pass-table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>다이 No</th>
+              <th>다이경 (mm)</th>
+              <th>감면율 (%)</th>
+              <th style="min-width:90px;">비율</th>
+              <th>면적 감소 (mm²)</th>
+              <th>진변형률</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="pass-tbody"></tbody>
+        </table>
+      </div>
+      <div class="pass-cards" id="pass-cards"></div>
+      <div id="final-note" style="margin-top:12px; font-size:12px; color:var(--text3);"></div>
+    </div>
+
+    <div class="card" style="margin-top:16px;">
+      <div class="card-title-row">
+        <div class="card-title" style="margin-bottom:0;">패스별 감면율 추이</div>
+        <button class="tool-btn" onclick="downloadAsImage(event, 'chart-capture', '패스별_감면율_추이')">⬇ 이미지로 저장</button>
+      </div>
+      <div id="chart-capture">
+        <div id="pass-chart"></div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:16px;">
+      <div class="card-title-row">
+        <div class="card-title" style="margin-bottom:0;">Dies 계열 검사표</div>
+        <button class="tool-btn" onclick="downloadAsImage(event, 'dies-capture', 'Dies_계열_검사표')">⬇ 이미지로 저장</button>
+      </div>
+      <div id="dies-capture">
+        <div class="dies-table-wrap">
+          <table class="dies-table">
+            <thead>
+              <tr>
+                <th colspan="3" style="background:var(--surface);"></th>
+                <th>DISE NO</th>
+                <th>DISE 경</th>
+                <th>누적감면율</th>
+                <th>개별감면율</th>
+              </tr>
+            </thead>
+            <tbody id="dies-tbody"></tbody>
+          </table>
+        </div>
+        <div style="font-size:11px; color:var(--text3); margin-top:10px;">
+          ※ DISE 경 = 각 패스 출선경(mm) · 누적감면율 = 중간선경 대비 해당 패스까지의 총 감면율 · 개별감면율 = 해당 패스 자체의 감면율
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 공식 참조 -->
+  <div id="tab-formula" class="tab-content">
+    <div class="grid">
+      <div class="card">
+        <div class="card-title">감면율 (Reduction of Area)</div>
+        <div class="formula-box"><span class="fv">RA</span> <span class="fo">=</span> (1 <span class="fo">-</span> <span class="fv">d₂</span>² <span class="fo">/</span> <span class="fv">d₁</span>²) <span class="fo">×</span> 100<br><span class="fc">// d₁ : 입선경, d₂ : 출선경 (mm)</span></div>
+        <p style="font-size:13px; color:var(--text2); line-height:1.7;">단면적 기준 감소율. 와이어 신선 공정에서 가공도를 나타내는 핵심 지표.</p>
+      </div>
+      <div class="card">
+        <div class="card-title">진변형률 (True Strain)</div>
+        <div class="formula-box"><span class="fv">ε</span> <span class="fo">=</span> ln(<span class="fv">A₀</span> <span class="fo">/</span> <span class="fv">A</span>)<br><span class="fo">  =</span> ln(<span class="fv">d₁</span>² <span class="fo">/</span> <span class="fv">d₂</span>²)<br><span class="fc">// A₀ : 입선 단면적, A : 출선 단면적</span></div>
+        <p style="font-size:13px; color:var(--text2); line-height:1.7;">누적 진변형률로 인장강도 추정에 활용. 다패스 시 각 패스 값의 합.</p>
+      </div>
+      <div class="card">
+        <div class="card-title">단면적</div>
+        <div class="formula-box"><span class="fv">A</span> <span class="fo">=</span> (π <span class="fo">/</span> 4) <span class="fo">×</span> <span class="fv">d</span>²<br><span class="fc">// d : 직경 (mm), A : mm²</span></div>
+        <p style="font-size:13px; color:var(--text2); line-height:1.7;">원형 단면 기준. π/4 ≈ 0.7854</p>
+      </div>
+      <div class="card">
+        <div class="card-title">기계 유형별 한계 감면율</div>
+        <table>
+          <thead><tr><th>유형</th><th>최대 감면율</th><th>비고</th></tr></thead>
+          <tbody>
+            <tr><td class="pass-num">H형</td><td>24 %</td><td style="font-size:12px; color:var(--text2);">Wet 신선기</td></tr>
+            <tr><td class="pass-num">D형</td><td>17 %</td><td style="font-size:12px; color:var(--text2);">건식 신선기</td></tr>
+          </tbody>
+        </table>
+        <p style="font-size:12px; color:var(--text3); margin-top:12px;">패스당 목표 감면율: 18~20% (H형 기준)</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer>DSR 제강 1공장 · 감면율 계산기 · 내부용</footer>
+
+<script>
+let machineLimit = 24;
+let passMachineLimit = 24;
+// passRates: 각 패스의 감면율(%) — 표시/하위호환용. 실제 기준은 passDiameters.
+let passRates = [];
+// passDiameters: 각 패스의 다이경(=출선경) 절대값. i번째를 바꿔도 다른 인덱스는 그대로 유지됨.
+let passDiameters = [];
+// 완성경(마지막 패스 출선경) 자동 고정 여부
+let lockFinalEnabled = true;
+
+function toggleLockFinal() {
+  lockFinalEnabled = document.getElementById('lock-final').checked;
+  renderPass();
+}
+
+/* ── 단순 계산 ─────────────────────────────── */
+function switchTab(id, btn) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('tab-' + id).classList.add('active');
+}
+
+function setMachine(limit, btn) {
+  document.querySelectorAll('#tab-single .machine-btns .mb').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  machineLimit = limit;
+  document.getElementById('limit').value = limit;
+  calcSingle();
+}
+
+function calcSingle() {
+  const d1 = parseFloat(document.getElementById('d1').value);
+  const d2 = parseFloat(document.getElementById('d2').value);
+  const limit = parseFloat(document.getElementById('limit').value) || 24;
+  machineLimit = limit;
+  const resEl = document.getElementById('single-results');
+  const limEl = document.getElementById('limit-result');
+  if (!d1 || !d2 || d1 <= 0 || d2 <= 0 || d2 >= d1) {
+    resEl.innerHTML = '<div class="empty">d₂ &lt; d₁ 조건을 확인하세요.</div>';
+    limEl.innerHTML = ''; return;
+  }
+  const A0 = Math.PI / 4 * d1 * d1;
+  const A  = Math.PI / 4 * d2 * d2;
+  const ra = (1 - (d2*d2)/(d1*d1)) * 100;
+  const strain = Math.log(A0 / A);
+  const drawRatio = d1 / d2;
+  resEl.innerHTML = `<div class="results-grid">
+    <div class="metric highlight"><div class="metric-label">감면율 (RA)</div><div class="metric-value">${ra.toFixed(2)}<span class="metric-unit">%</span></div></div>
+    <div class="metric"><div class="metric-label">입선 면적</div><div class="metric-value">${A0.toFixed(4)}<span class="metric-unit">mm²</span></div></div>
+    <div class="metric"><div class="metric-label">출선 면적</div><div class="metric-value">${A.toFixed(4)}<span class="metric-unit">mm²</span></div></div>
+    <div class="metric"><div class="metric-label">감소 면적</div><div class="metric-value">${(A0-A).toFixed(4)}<span class="metric-unit">mm²</span></div></div>
+    <div class="metric"><div class="metric-label">진변형률 (ε)</div><div class="metric-value">${strain.toFixed(4)}</div></div>
+    <div class="metric"><div class="metric-label">신선비 (d₁/d₂)</div><div class="metric-value">${drawRatio.toFixed(3)}</div></div>
+  </div>`;
+  const margin = limit - ra;
+  const over = ra > limit; const near = ra > limit * 0.9 && !over;
+  const cls = over ? 'danger' : near ? 'warn' : 'ok';
+  const icon = over ? '✕' : near ? '△' : '○';
+  const msg = over ? `한계 초과 (+${Math.abs(margin).toFixed(2)}%)` : near ? `주의 — 한계의 90% 이상` : `정상 범위`;
+  limEl.innerHTML = `<div class="limit-box ${cls}"><div class="lb-title">${icon} ${msg}</div><div class="lb-sub">감면율 ${ra.toFixed(2)}% / 최대 허용 ${limit}% / 여유 ${margin>=0?'+':''}${margin.toFixed(2)}%</div></div>`;
+}
+
+/* ── 패스 스케줄 ────────────────────────────── */
+function setPassMachine(limit, btn) {
+  document.getElementById('pb-H').classList.remove('active');
+  document.getElementById('pb-D').classList.remove('active');
+  btn.classList.add('active');
+  passMachineLimit = limit;
+  renderPass();
+}
+
+// d1 입력칸 변경: 고정 모드면 패스 구성은 유지하고 시작점만 갱신 후 마지막 패스 재조정
+//                고정 아니면 전체 균등 재배분
+function onBaseD1Change() {
+  if (lockFinalEnabled && passDiameters.length > 0) {
+    renderPass(); // renderPass 내부에서 lockFinalEnabled면 마지막 다이경을 d2로 재고정
+  } else {
+    initPass();
+  }
+}
+
+// d2(목표 완선경) 입력칸 변경: 고정 모드면 패스 구성은 절대 건드리지 않고
+//                            마지막 다이경만 새 완선경에 맞춰 교체
+//                고정 아니면 전체 균등 재배분
+function onTargetD2Change() {
+  if (lockFinalEnabled && passDiameters.length > 0) {
+    renderPass();
+  } else {
+    initPass();
+  }
+}
+
+// 균등 배분으로 passDiameters 초기화 (각 패스의 절대 다이경을 직접 채움)
+function initPass() {
+  const d1 = parseFloat(document.getElementById('p-d1').value);
+  const d2 = parseFloat(document.getElementById('p-d2').value);
+  const n  = parseInt(document.getElementById('p-passes').value) || 10;
+  if (!d1 || !d2 || d1 <= 0 || d2 <= 0 || d2 >= d1 || n < 1) { passDiameters = []; renderPass(); return; }
+  const totalAreaRatio = (d2*d2)/(d1*d1);
+  const passAreaRatio  = Math.pow(totalAreaRatio, 1/n);
+  let cur = d1;
+  passDiameters = [];
+  for (let i = 0; i < n; i++) {
+    cur = (i === n - 1) ? d2 : cur * Math.sqrt(passAreaRatio);
+    passDiameters.push(cur);
+  }
+  passDiameters[n - 1] = d2; // 마지막은 항상 정확히 d2
+  renderPass();
+}
+
+// 테이퍼드 배분: 1번 낮게 시작 → 2번에서 피크 → 이후 점차 감소.
+// 각 패스의 "감면 강도(가중치)"를 만들고, 그 비율대로 전체 면적감소(ln(A0/A) 기준)를 분배해
+// 정확히 d1→d2에 도달하면서도 사진의 곡선 모양을 재현한다.
+function applyTaperedPass() {
+  const d1 = parseFloat(document.getElementById('p-d1').value);
+  const d2 = parseFloat(document.getElementById('p-d2').value);
+  const n  = parseInt(document.getElementById('p-passes').value) || 10;
+  if (!d1 || !d2 || d1 <= 0 || d2 <= 0 || d2 >= d1 || n < 1) { passDiameters = []; renderPass(); return; }
+
+  // 가중치 패턴 생성: 1번은 낮게(start), 2번 근처에서 피크(peak), 이후 점차 감소(end)
+  const weights = [];
+  const peakIdx = n >= 4 ? 1 : 0; // 4패스 이상이면 2번째(index1)에서 피크, 짧으면 1번에서 시작
+  for (let i = 0; i < n; i++) {
+    let w;
+    if (i === 0) {
+      w = 0.78; // 1번: 낮게 시작
+    } else if (i <= peakIdx) {
+      w = 1.05; // 2번 근처: 피크
+    } else {
+      // 피크 이후 마지막까지 완만하게 선형 감소
+      const t = (i - peakIdx) / Math.max(1, (n - 1 - peakIdx));
+      w = 1.05 - t * 0.35; // 1.05 → 0.70 정도까지 완만히 감소
+    }
+    weights.push(Math.max(w, 0.3));
+  }
+
+  // 전체 진변형률(ln(d1^2/d2^2))을 가중치 비율대로 분배
+  const totalStrain = Math.log((d1*d1) / (d2*d2));
+  const weightSum = weights.reduce((a,b) => a+b, 0);
+  const MAX_RA = 23; // 각 패스 감면율 상한 (23% 미만 유지)
+  const maxStrainPerPass = -2 * Math.log(Math.sqrt(1 - MAX_RA/100)); // RA=23%에 해당하는 패스당 최대 진변형률
+
+  // 1차: 가중치대로 패스별 진변형률 배분
+  let strainShares = weights.map(w => totalStrain * (w / weightSum));
+
+  // 2차: 23%를 넘는 패스는 상한으로 클램프하고, 초과분을 클램프 안 걸린 패스들에 가중치 비율로 재분배.
+  // 모든 패스가 클램프에 걸려도(=물리적으로 23% 밑으로 더는 못 줄임) 더 분배 못하면 그대로 둠(패스 수 부족 안내는 final-note가 처리).
+  for (let iter = 0; iter < 8; iter++) {
+    let excess = 0;
+    const freeIdx = [];
+    for (let i = 0; i < n; i++) {
+      if (strainShares[i] > maxStrainPerPass) {
+        excess += strainShares[i] - maxStrainPerPass;
+        strainShares[i] = maxStrainPerPass;
+      } else {
+        freeIdx.push(i);
+      }
+    }
+    if (excess <= 1e-9 || freeIdx.length === 0) break;
+    const freeWeightSum = freeIdx.reduce((s,i) => s + weights[i], 0);
+    freeIdx.forEach(i => { strainShares[i] += excess * (weights[i] / freeWeightSum); });
+  }
+
+  let cur = d1;
+  passDiameters = [];
+  for (let i = 0; i < n; i++) {
+    let next = (i === n - 1) ? d2 : cur * Math.exp(-strainShares[i] / 2); // ε = ln(d_in^2/d_out^2) = 2*ln(d_in/d_out)
+    passDiameters.push(next);
+    cur = next;
+  }
+  passDiameters[n - 1] = d2; // 마지막은 항상 정확히 d2
+
+  // 23% 제한을 지키면서 패스 수 내에 다 못 줄였다면(=마지막 패스가 23%를 초과) 안내
+  const lastRa = (1 - (d2*d2)/(cur*cur)) * 100;
+  if (lastRa > MAX_RA + 0.5) {
+    document.getElementById('final-note').textContent =
+      `※ 패스당 23% 제한을 지키기엔 패스 수(${n}개)가 부족합니다. "＋ 패스 추가"로 패스를 늘려주세요.`;
+  }
+
+  renderPass();
+}
+
+// 마지막 패스의 다이경을 정확히 d2(완선경)로 고정
+function fixLastPassToTarget(d1, d2) {
+  if (passDiameters.length === 0) return;
+  passDiameters[passDiameters.length - 1] = d2;
+}
+
+function resetPass() { initPass(); }
+
+function addPass() {
+  if (passDiameters.length === 0) return;
+  if (lockFinalEnabled && passDiameters.length > 0) {
+    // 마지막(고정) 다이 앞에 새 다이를 끼워넣음: 직전 다이경과 마지막 다이경의 중간값으로 시작
+    const before = passDiameters.length >= 2 ? passDiameters[passDiameters.length - 2] : parseFloat(document.getElementById('p-d1').value);
+    const after  = passDiameters[passDiameters.length - 1];
+    const mid = Math.sqrt(before * after); // 면적 기준 중간값
+    passDiameters.splice(passDiameters.length - 1, 0, mid);
+  } else {
+    const d1 = parseFloat(document.getElementById('p-d1').value);
+    const last = passDiameters.length > 0 ? passDiameters[passDiameters.length - 1] : d1;
+    const prevIn = passDiameters.length > 1 ? passDiameters[passDiameters.length - 2] : d1;
+    const ratio = last / prevIn; // 마지막 패스와 비슷한 비율로 한 단계 추가
+    const next = last * (ratio < 1 ? ratio : 0.82);
+    passDiameters.push(Math.max(next, last * 0.5));
+  }
+  renderPass();
+}
+
+function removePass(i) {
+  if (passDiameters.length <= 1) return;
+  if (lockFinalEnabled && i === passDiameters.length - 1) return; // 고정된 마지막 패스는 삭제 불가
+
+  if (i === 0) {
+    // 맨 처음 패스를 삭제 → 그 패스의 다이경(출선경)을 새로운 시작점(중간선경)으로 승격
+    const newStart = passDiameters[0];
+    document.getElementById('p-d1').value = newStart.toFixed(3);
+  }
+
+  passDiameters.splice(i, 1);
+  renderPass();
+}
+
+
+// 다이경(=i번째 패스의 출선경)을 직접 입력.
+// passDiameters[i]만 바꾸고 다른 인덱스는 절대 건드리지 않음 → 뒤쪽 패스에 영향 없음.
+function onDieChange(i, val) {
+  // 완선경 고정 모드에서는 마지막 패스의 다이경을 사용자가 직접 바꿀 수 없음
+  if (lockFinalEnabled && i === passDiameters.length - 1) { renderPass(); return; }
+
+  const newDout = parseFloat(val);
+  if (isNaN(newDout) || newDout <= 0) { renderPass(); return; }
+
+  // 입선경(직전 단계 결과)보다는 작아야 함. 1번 패스(i=0)의 입선경은 항상 중간선경(p-d1).
+  const d1 = parseFloat(document.getElementById('p-d1').value);
+  const prevDout = i === 0 ? d1 : passDiameters[i - 1];
+  if (newDout > 0 && newDout < prevDout) {
+    passDiameters[i] = newDout;
+  }
+  renderPass();
+}
+
+// 모바일 카드뷰 −/+ 버튼: 현재 다이경에서 0.01mm씩 증감
+function stepDie(i, delta) {
+  if (lockFinalEnabled && i === passDiameters.length - 1) return;
+  const cur = passDiameters[i];
+  const newVal = parseFloat((cur + delta).toFixed(2));
+  onDieChange(i, newVal);
+}
+
+// 특정 영역(차트 / Dies 검사표)을 가로형 PNG 이미지로 캡처해서 저장(또는 휴대폰에서는 공유 시트로 카톡 전송).
+async function downloadAsImage(evt, elementId, fileName) {
+  const el = document.getElementById(elementId);
+  if (!el || typeof html2canvas === 'undefined') {
+    alert('이미지 변환 기능을 불러오지 못했습니다. 인터넷 연결을 확인해주세요.');
+    return;
+  }
+
+  const btn = evt && evt.target ? evt.target.closest('button') : null;
+  const originalText = btn ? btn.textContent : '';
+  if (btn) { btn.textContent = '저장 중...'; btn.disabled = true; }
+
+  // 화면 크기(모바일 좁은 폭)와 무관하게, 데스크탑 레이아웃 폭으로 고정한 복제본을
+  // 화면 밖에 만들어서 그걸 캡처한다. 이렇게 하면 모바일에서 눌러도
+  // 글자가 작아지거나 표가 잘리지 않고 PC에서 보는 것과 동일한 큰 화면으로 저장된다.
+  const FIXED_WIDTH = 1300; // 캡처 기준 가로폭(px). scale=3과 곱해도 모바일 캔버스 한계(~4096px) 이내로 안전하게 유지
+  const clone = el.cloneNode(true);
+  clone.removeAttribute('id');
+  // 캡처본 안의 input 값은 보이는 그대로 고정 텍스트로 바꿔준다 (input은 캡처가 잘 안 되는 경우가 있음)
+  clone.querySelectorAll('input').forEach((input) => {
+    const span = document.createElement('span');
+    span.textContent = input.value;
+    span.style.cssText = 'font-family:var(--mono);font-size:13px;color:inherit;padding:2px 4px;';
+    input.replaceWith(span);
+  });
+  clone.querySelectorAll('button').forEach((b) => b.remove()); // 저장/삭제 등 버튼은 이미지에서 제외
+  // 가로 스크롤 영역이 있으면(Dies 표 등) 캡처 시 잘리지 않도록 스크롤 제한 해제
+  clone.querySelectorAll('.dies-table-wrap, .pass-table-wrap').forEach((w) => {
+    w.style.overflowX = 'visible';
+  });
+
+  const wrapper = document.createElement('div');
+  wrapper.style.cssText = `position:fixed; left:-99999px; top:0; width:${FIXED_WIDTH}px; background:#ffffff; padding:24px; box-sizing:border-box;`;
+  wrapper.appendChild(clone);
+  document.body.appendChild(wrapper);
+
+  try {
+    let canvas;
+    try {
+      canvas = await html2canvas(wrapper, {
+        backgroundColor: '#ffffff',
+        scale: 2.5,
+        useCORS: true,
+        width: FIXED_WIDTH,
+        windowWidth: FIXED_WIDTH
+      });
+    } catch (e1) {
+      // 메모리 부족 등으로 고해상도 캡처가 실패하면 한 단계 낮춰서 재시도
+      canvas = await html2canvas(wrapper, {
+        backgroundColor: '#ffffff',
+        scale: 1.5,
+        useCORS: true,
+        width: FIXED_WIDTH,
+        windowWidth: FIXED_WIDTH
+      });
+    }
+
+    canvas.toBlob(async (blob) => {
+      document.body.removeChild(wrapper);
+      if (!blob) { if (btn) { btn.textContent = originalText; btn.disabled = false; } return; }
+      const file = new File([blob], `${fileName}.png`, { type: 'image/png' });
+
+      // 모바일에서 카톡 등으로 바로 공유 가능한 Web Share API 시도
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        try {
+          await navigator.share({ files: [file], title: fileName });
+          if (btn) { btn.textContent = originalText; btn.disabled = false; }
+          return;
+        } catch (e) {
+          // 사용자가 공유를 취소한 경우 등 — 그냥 다운로드로 폴백
+        }
+      }
+
+      // 폴백: 일반 다운로드 (PC, 공유 미지원 브라우저)
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${fileName}.png`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+      if (btn) { btn.textContent = originalText; btn.disabled = false; }
+    }, 'image/png');
+  } catch (e) {
+    if (wrapper.parentNode) document.body.removeChild(wrapper);
+    alert('이미지 저장 중 오류가 발생했습니다.');
+    if (btn) { btn.textContent = originalText; btn.disabled = false; }
+  }
+}
+
+function renderPass() {
+  const d1    = parseFloat(document.getElementById('p-d1').value);
+  const d2    = parseFloat(document.getElementById('p-d2').value);
+  const limit = passMachineLimit;
+  const tbody = document.getElementById('pass-tbody');
+  const summary = document.getElementById('pass-summary');
+  const remNote = document.getElementById('remaining-note');
+  const finalNote = document.getElementById('final-note');
+
+  if (!d1 || !d2 || d1 <= 0 || d2 <= 0 || d2 >= d1 || passDiameters.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="8" class="empty" style="text-align:center;padding:16px;">조건을 입력하세요.</td></tr>';
+    summary.innerHTML = ''; remNote.textContent = ''; finalNote.textContent = '';
+    document.getElementById('pass-chart').innerHTML = '';
+    document.getElementById('feed-note').innerHTML = '';
+    const dt = document.getElementById('dies-tbody'); if (dt) dt.innerHTML = '';
+    return;
+  }
+
+  // 완성경 자동 고정이 켜져 있으면, 마지막 다이경을 d2로 강제
+  if (lockFinalEnabled) {
+    fixLastPassToTarget(d1, d2);
+  }
+
+  document.getElementById('feed-note').innerHTML = `투입 중간선경: <strong style="font-family:var(--mono);color:var(--text);">${d1.toFixed(3)} mm</strong> → 아래 다이 1번부터 순서대로 통과`;
+
+  // 각 패스 계산: passDiameters[i] = 그 패스의 다이경(출선경) 절대값
+  let cur = d1;
+  const rows = passDiameters.map((dieD, i) => {
+    const din   = cur;
+    const dout  = dieD;
+    const ra    = (1 - (dout*dout)/(din*din)) * 100;
+    const A0p   = Math.PI/4 * din*din;
+    const Ap    = Math.PI/4 * dout*dout;
+    const strain = Math.log(A0p/Ap);
+    const dA    = A0p - Ap;
+    cur = dout;
+    return { din, dout, ra, strain, dA };
+  });
+
+  const finalD = rows[rows.length-1].dout;
+  const totalRa = (1 - (finalD*finalD)/(d1*d1)) * 100;
+  const targetRa = (1 - (d2*d2)/(d1*d1)) * 100;
+  const diff = finalD - d2; // 목표 대비 잔차
+  const totalStrain = rows.reduce((s,r) => s + r.strain, 0);
+  const avgRa = rows.reduce((s,r) => s+r.ra, 0) / rows.length;
+  const overCount = rows.filter(r => r.ra > limit).length;
+
+  // 잔여 감면율 표시
+  const remaining = targetRa - totalRa;
+  const remAbs = Math.abs(remaining).toFixed(2);
+  if (Math.abs(remaining) > 0.05) {
+    remNote.className = remaining > 0 ? 'remaining-note over-note' : 'remaining-note';
+    remNote.textContent = remaining > 0
+      ? `▲ 완선경 대비 감면 부족 ${remAbs}% (출선경 ${finalD.toFixed(3)} mm > 완선경 ${d2} mm)`
+      : `▼ 완선경 대비 감면 초과 ${remAbs}% (출선경 ${finalD.toFixed(3)} mm < 완선경 ${d2} mm)`;
+  } else {
+    remNote.className = 'remaining-note';
+    remNote.textContent = `✓ 출선경 ${finalD.toFixed(3)} mm ≈ 완선경 ${d2} mm`;
+  }
+
+  // 요약
+  summary.innerHTML = `
+    <div class="metric highlight"><div class="metric-label">총 감면율 (실제)</div><div class="metric-value">${totalRa.toFixed(2)}<span class="metric-unit">%</span></div></div>
+    <div class="metric"><div class="metric-label">총 패스 수</div><div class="metric-value">${rows.length}<span class="metric-unit">패스</span></div></div>
+    <div class="metric"><div class="metric-label">패스당 평균</div><div class="metric-value">${avgRa.toFixed(2)}<span class="metric-unit">%</span></div></div>
+    <div class="metric"><div class="metric-label">총 진변형률</div><div class="metric-value">${totalStrain.toFixed(4)}</div></div>
+    ${overCount > 0 ? `<div class="metric danger-m"><div class="metric-label">한계 초과</div><div class="metric-value">${overCount}<span class="metric-unit">패스</span></div></div>` : ''}
+  `;
+
+  // 테이블
+  tbody.innerHTML = rows.map((r, i) => {
+    const over = r.ra > limit;
+    const near = r.ra > limit * 0.9 && !over;
+    const badge = over ? `<span class="badge badge-danger">초과</span>` : near ? `<span class="badge badge-warn">주의</span>` : '';
+    const barW  = Math.min(Math.round((r.ra / limit) * 60), 60);
+    const barCls = over ? 'over-bar' : near ? 'warn-bar' : 'ok-bar';
+    const isLastLocked = lockFinalEnabled && i === rows.length - 1;
+    const dieVal = isLastLocked ? d2 : r.dout;
+    return `<tr class="${over ? 'row-over' : ''}">
+      <td><span class="pass-num">${i+1}번</span></td>
+      <td>
+        <input class="ra-input" type="number" value="${dieVal.toFixed(2)}" min="0.01" step="0.01" style="width:84px"
+          onchange="onDieChange(${i}, this.value)" ${isLastLocked ? 'disabled title="완선경 자동 고정 중 — 항상 완선경 값으로 유지됩니다"' : ''} style="${isLastLocked ? 'opacity:0.55;cursor:not-allowed;width:84px;' : 'width:84px;'}">
+        ${isLastLocked ? '<span class="badge" style="background:var(--accent-light);color:var(--accent);">🔒고정</span>' : ''}
+      </td>
+      <td class="computed">${r.ra.toFixed(2)}% ${badge}</td>
+      <td><div class="bar-wrap"><div class="bar ${barCls}" style="width:${barW}px"></div><span style="font-size:11px;color:var(--text3)">${r.ra.toFixed(1)}%</span></div></td>
+      <td class="computed">${r.dA.toFixed(4)}</td>
+      <td class="computed">${r.strain.toFixed(4)}</td>
+      <td><div class="row-actions">${isLastLocked ? '' : `<button class="act-btn" title="삭제" onclick="removePass(${i})">✕</button>`}</div></td>
+    </tr>`;
+  }).join('');
+
+  // 모바일 카드뷰
+  const cardsEl = document.getElementById('pass-cards');
+  if (cardsEl) {
+    cardsEl.innerHTML = rows.map((r, i) => {
+      const over = r.ra > limit;
+      const near = r.ra > limit * 0.9 && !over;
+      const barCls = over ? 'over-bar' : near ? 'warn-bar' : 'ok-bar';
+      const barPct = Math.min(Math.round((r.ra / limit) * 100), 100);
+      const isLastLocked = lockFinalEnabled && i === rows.length - 1;
+      const dieVal = isLastLocked ? d2 : r.dout;
+      const statusBadge = over ? `<span class="badge badge-danger">초과</span>` : near ? `<span class="badge badge-warn">주의</span>` : '';
+      return `<div class="pass-card ${over ? 'over' : ''}">
+        <div class="pass-card-top">
+          <span class="pass-card-num">${i+1}번 다이</span>
+          ${isLastLocked
+            ? '<span class="pass-card-lock">🔒 완선경 고정</span>'
+            : `<button class="pass-card-del" onclick="removePass(${i})">✕</button>`}
+        </div>
+        <div class="pass-card-row">
+          <span class="pass-card-label">다이경 (mm)</span>
+          <div class="die-stepper">
+            <button type="button" class="die-step-btn" onclick="stepDie(${i}, -0.01)" ${isLastLocked ? 'disabled' : ''}>−</button>
+            <input type="number" id="die-input-${i}" value="${dieVal.toFixed(2)}" min="0.01" step="0.01"
+              onchange="onDieChange(${i}, this.value)" ${isLastLocked ? 'disabled style="opacity:0.55;"' : ''}>
+            <button type="button" class="die-step-btn" onclick="stepDie(${i}, 0.01)" ${isLastLocked ? 'disabled' : ''}>＋</button>
+          </div>
+        </div>
+        <div class="pass-card-row">
+          <span class="pass-card-label">감면율</span>
+          <span class="pass-card-stat">${r.ra.toFixed(2)}% ${statusBadge}</span>
+        </div>
+        <div class="pass-card-bar"><div class="pass-card-bar-fill ${barCls}" style="width:${barPct}%"></div></div>
+        <div class="pass-card-row" style="margin-top:8px;">
+          <span class="pass-card-label">면적감소 / 진변형률</span>
+          <span class="pass-card-stat">${r.dA.toFixed(3)} / ${r.strain.toFixed(4)}</span>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  // 목표 대비 최종 행
+  finalNote.textContent = Math.abs(remaining) > 0.05
+    ? `※ 중간선경 ${d1} mm → 실제 완선경 ${finalD.toFixed(3)} mm (목표 ${d2} mm 와 ${Math.abs(diff).toFixed(3)} mm 차이). 감면율을 조정하거나 패스를 추가하세요.`
+    : '';
+
+  renderChart(rows, limit);
+  renderDiesTable(rows, d1);
+}
+
+function renderDiesTable(rows, d1) {
+  const tbody = document.getElementById('dies-tbody');
+  if (!tbody) return;
+  if (!rows || rows.length === 0) { tbody.innerHTML = ''; return; }
+
+  // 좌측 라벨 컬럼 (사진 양식 기준: 검사일자 + 11개 항목)
+  const labels = ['검사일자', '설비명', '강종', '선속', '전체감면율', '__midfinal__', '실Dia', '파단하중', '인장강도', 'T/O', '작업자', '비틀림형태'];
+  const n = rows.length;
+  const rowCount = Math.max(labels.length, n);
+  const finalDout = rows[rows.length - 1].dout;
+
+  let html = '';
+  for (let i = 0; i < rowCount; i++) {
+    const label = labels[i];
+    const r = rows[i]; // 해당 행에 대응하는 패스 (없으면 undefined)
+    const isLast = i === n - 1;
+
+    // 좌측 라벨 + 자유입력 칸
+    let leftCells;
+    if (label === '__midfinal__') {
+      leftCells = `<td class="label-cell x-cell">✕</td><td class="label-cell" colspan="2">중간선 ${d1.toFixed(3)} / 완선경 ${finalDout.toFixed(3)}</td>`;
+    } else if (label === '검사일자') {
+      leftCells = `<td class="label-cell">검사일자</td><td colspan="2"><input type="text" id="dies-date" placeholder="YYYY-MM-DD"></td>`;
+    } else if (label === '실Dia') {
+      leftCells = `<td class="label-cell">실 Dia</td><td>${d1.toFixed(3)}</td><td>${finalDout.toFixed(3)}</td>`;
+    } else if (label === '전체감면율') {
+      const totalRaPct = (1 - (finalDout*finalDout)/(d1*d1)) * 100;
+      leftCells = `<td class="label-cell">전체감면율</td><td colspan="2"><input type="text" value="${totalRaPct.toFixed(2)}%" readonly></td>`;
+    } else if (label) {
+      leftCells = `<td class="label-cell">${label}</td><td colspan="2"><input type="text" placeholder="입력"></td>`;
+    } else {
+      leftCells = `<td class="label-cell"></td><td colspan="2"></td>`;
+    }
+
+    // 우측 DISE 데이터 (해당 패스가 있을 때만)
+    let rightCells;
+    if (r) {
+      const cumulRa = (1 - (r.dout*r.dout)/(d1*d1)) * 100;
+      rightCells = `
+        <td class="dise-num">${i + 1}</td>
+        <td class="dise-cell">${r.dout.toFixed(2)}</td>
+        <td class="dise-cell">${cumulRa.toFixed(2)}%</td>
+        <td class="dise-cell">${r.ra.toFixed(2)}%</td>
+      `;
+    } else {
+      rightCells = `<td></td><td></td><td></td><td></td>`;
+    }
+
+    html += `<tr class="${isLast ? 'dies-final-row' : ''}">${leftCells}${rightCells}</tr>`;
+  }
+
+  tbody.innerHTML = html;
+}
+
+function renderChart(rows, limit) {
+  const el = document.getElementById('pass-chart');
+  if (!rows || rows.length === 0) { el.innerHTML = ''; return; }
+
+  const W = 760, H = 280;
+  const padL = 46, padR = 16, padT = 16, padB = 36;
+  const plotW = W - padL - padR;
+  const plotH = H - padT - padB;
+  const n = rows.length;
+
+  const maxRa = Math.max(limit, ...rows.map(r => r.ra)) * 1.12;
+  const yScale = v => padT + plotH - (v / maxRa) * plotH;
+  const xStep = n > 1 ? plotW / (n - 1) : 0;
+  const xScale = i => padL + (n > 1 ? i * xStep : plotW / 2);
+
+  // y축 그리드 라인 (0, 25, 50, 75, 100% 중 maxRa 이하만, 5단계)
+  const gridCount = 5;
+  let gridLines = '';
+  let yLabels = '';
+  for (let g = 0; g <= gridCount; g++) {
+    const val = (maxRa / gridCount) * g;
+    const y = yScale(val);
+    gridLines += `<line x1="${padL}" y1="${y}" x2="${W-padR}" y2="${y}" stroke="var(--border)" stroke-width="1"/>`;
+    yLabels += `<text x="${padL-8}" y="${y+4}" font-size="11" fill="var(--text3)" text-anchor="end">${val.toFixed(0)}%</text>`;
+  }
+
+  // 한계선
+  const limitY = yScale(limit);
+  const limitLine = `<line x1="${padL}" y1="${limitY}" x2="${W-padR}" y2="${limitY}" stroke="var(--danger)" stroke-width="1.5" stroke-dasharray="5,4"/>
+    <text x="${W-padR}" y="${limitY-6}" font-size="11" fill="var(--danger)" text-anchor="end">한계 ${limit}%</text>`;
+
+  // 데이터 포인트 & 라인
+  const points = rows.map((r, i) => ({ x: xScale(i), y: yScale(r.ra), ra: r.ra, over: r.ra > limit }));
+  const linePath = points.map((p, i) => (i === 0 ? 'M' : 'L') + p.x.toFixed(1) + ',' + p.y.toFixed(1)).join(' ');
+  const areaPath = linePath + ` L${points[points.length-1].x.toFixed(1)},${padT+plotH} L${points[0].x.toFixed(1)},${padT+plotH} Z`;
+
+  const dots = points.map((p, i) => `
+    <circle cx="${p.x}" cy="${p.y}" r="4" fill="${p.over ? 'var(--danger)' : 'var(--accent)'}" stroke="var(--surface)" stroke-width="1.5">
+      <title>${i+1}패스: ${p.ra.toFixed(2)}%</title>
+    </circle>
+    <text x="${p.x}" y="${p.y - 11}" font-size="10.5" fill="${p.over ? 'var(--danger)' : 'var(--text2)'}" text-anchor="middle" font-family="var(--mono)">${p.ra.toFixed(1)}</text>
+  `).join('');
+
+  const xLabels = points.map((p, i) => `<text x="${p.x}" y="${H-padB+18}" font-size="11" fill="var(--text3)" text-anchor="middle">${i+1}</text>`).join('');
+
+  el.innerHTML = `
+    <svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block; max-width:100%; height:auto;">
+      ${gridLines}
+      ${yLabels}
+      ${limitLine}
+      <path d="${areaPath}" fill="var(--accent-light)" opacity="0.5"/>
+      <path d="${linePath}" fill="none" stroke="var(--accent-mid)" stroke-width="2"/>
+      ${dots}
+      <line x1="${padL}" y1="${padT+plotH}" x2="${W-padR}" y2="${padT+plotH}" stroke="var(--border2)" stroke-width="1"/>
+      ${xLabels}
+      <text x="${padL + plotW/2}" y="${H-6}" font-size="11" fill="var(--text3)" text-anchor="middle">패스 번호</text>
+    </svg>
+  `;
+}
+
+/* 초기 실행 */
+calcSingle();
+initPass();
+
+/* PWA: 서비스워커 등록 (오프라인 지원, 홈화면 설치, 업데이트 자동 반영) */
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').then((reg) => {
+      // 새 서비스워커가 설치 완료되면(=새 버전 배포됨) 자동으로 한 번 새로고침
+      reg.addEventListener('updatefound', () => {
+        const newWorker = reg.installing;
+        if (!newWorker) return;
+        newWorker.addEventListener('statechange', () => {
+          if (newWorker.state === 'activated') {
+            window.location.reload();
+          }
+        });
+      });
+      // 주기적으로(5분마다) 업데이트 확인 — 앱을 오래 켜놔도 최신 버전 반영
+      setInterval(() => reg.update(), 5 * 60 * 1000);
+    }).catch(() => {});
+  });
+}
+</script>
+</body>
+</html>
