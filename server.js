@@ -213,9 +213,9 @@ wss.on('connection', (ws) => {
 // 네트워크 공유 폴더 감시 (폴링 방식)
 const watcher = chokidar.watch(EXCEL_PATH, {
   usePolling: true,
-  interval: 5000,
+  interval: 2000,        // 2초마다 폴링 (기존 5초)
   ignoreInitial: true,
-  awaitWriteFinish: { stabilityThreshold: 2000, pollInterval: 500 }
+  awaitWriteFinish: { stabilityThreshold: 1500, pollInterval: 300 }
 });
 
 watcher.on('change', () => broadcastExcel('파일 변경'));
