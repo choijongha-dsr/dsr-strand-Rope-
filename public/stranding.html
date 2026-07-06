@@ -1593,15 +1593,12 @@ function renderTable(){
 
   let rows = '';
   if(iwGroups.length){
-    rows += `<tr class="section-hdr section-hdr-iw"><td colspan="${COL_COUNT}">🔧 IW 단계<span class="section-cnt">${iwGroups.length}건</span></td></tr>`;
     iwGroups.forEach((g, i) => { rows += renderGroupRows(g, i); });
   }
   if(stGroups.length){
-    rows += `<tr class="section-hdr section-hdr-st"><td colspan="${COL_COUNT}">⚙️ ST 단계<span class="section-cnt">${stGroups.length}건</span></td></tr>`;
     stGroups.forEach((g, i) => { rows += renderGroupRows(g, i); });
   }
   if(iwrcGroups.length){
-    rows += `<tr class="section-hdr" style="background:#fff3e0;color:#bf360c;border-left:4px solid #ff6d00;"><td colspan="${COL_COUNT}" style="background:#fff3e0;color:#bf360c;">🔩 IWRC 작업<span class="section-cnt" style="background:#ffe0b2;color:#bf360c;">${iwrcGroups.length}건</span></td></tr>`;
     iwrcGroups.forEach((g, i) => { rows += renderGroupRows(g, i); });
   }
 
