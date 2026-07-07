@@ -1,13 +1,11 @@
 @echo off
-title DSR 연선공정표 키오스크
+title DSR Strand Kiosk
 
-echo [1/3] Node.js 서버 시작 중...
-start /min cmd /k "cd /d "%~dp0" && node server.js"
+echo Starting server...
+start /min powershell -NoProfile -WindowStyle Minimized -File "%~dp0start-server.ps1"
 
-echo [2/3] 잠시 대기...
-timeout /t 3 /nobreak >nul
+echo Waiting...
+timeout /t 4 /nobreak >nul
 
-echo [3/3] 브라우저 시작...
+echo Opening browser...
 start "" "C:\Program Files\Google\Chrome\Application\chrome.exe" --kiosk http://localhost:3000 --no-first-run --disable-infobars --disable-session-crashed-bubble --disable-extensions --noerrdialogs
-
-echo 완료!
