@@ -41,19 +41,17 @@ html,body{height:100%;font-family:'맑은 고딕','Malgun Gothic','Apple SD Goth
 /* ── 기계 선택 화면 ── */
 #screen-select{align-items:center;justify-content:center;gap:20px;padding:30px 20px;}
 .select-title{font-size:22px;font-weight:700;color:var(--navy);margin-bottom:10px;}
-.machine-grid{display:flex;flex-wrap:wrap;gap:20px;justify-content:center;width:100%;}
+.machine-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px;width:100%;max-width:960px;}
 .machine-btn{
-  background:var(--white);border:3px solid var(--border);border-radius:20px;
-  padding:30px 20px;cursor:pointer;transition:all 0.15s;
-  display:flex;flex-direction:column;align-items:center;gap:10px;
-  min-width:220px;flex:1;max-width:320px;
-  box-shadow:0 4px 20px rgba(0,0,0,0.08);
+  background:var(--white);border:3px solid var(--border);border-radius:16px;
+  padding:22px 16px;cursor:pointer;transition:all 0.15s;
+  display:flex;flex-direction:column;align-items:center;gap:8px;
+  box-shadow:0 2px 12px rgba(0,0,0,0.07);
   touch-action:manipulation;
 }
 .machine-btn:hover,.machine-btn:active{background:#f0f4ff;border-color:var(--navy2);transform:translateY(-2px);}
-.machine-btn-icon{font-size:42px;}
-.machine-btn-name{font-size:22px;font-weight:900;color:var(--navy);}
-.machine-btn-orders{font-size:14px;color:var(--muted);font-weight:600;}
+.machine-btn-name{font-size:18px;font-weight:900;color:var(--navy);}
+.machine-btn-orders{font-size:13px;color:var(--muted);font-weight:600;}
 .machine-btn.loading{opacity:0.5;pointer-events:none;}
 
 .no-excel{text-align:center;padding:40px;color:var(--red);font-size:16px;line-height:2;}
@@ -234,45 +232,37 @@ function setLive(on){
   document.getElementById('live-txt').textContent = on ? 'LIVE' : '연결 끊김';
 }
 
-// ── 설정 로드 ─────────────────────────────────────────────────
-async function loadConfig(){
-  try {
-    const r = await fetch('/api/config');
-    config = await r.json();
-    document.getElementById('hdr-kiosk').textContent = config.kiosk_name || '';
-    renderMachineGrid();
-  } catch(e) {
-    console.warn('config 로드 실패', e);
-  }
-}
+const MACHINE_LIST = [
+  {id:'m1',  name:'16"x35B'},  {id:'m2',  name:'12"X36B-1'},
+  {id:'m3',  name:'12"X36B-2'},{id:'m4',  name:'12"x25B-1'},
+  {id:'m5',  name:'12"x35B-2'},{id:'m6',  name:'12"x42B'},
+  {id:'m7',  name:'10"x35B'},  {id:'m8',  name:'8"x36B'},
+  {id:'m9',  name:'12"x6B'},   {id:'m10', name:'14"X6B'},
+  {id:'m11', name:'16"X6B'},   {id:'m12', name:'10"X6B-2'},
+  {id:'m13', name:'12"x9B'},   {id:'m14', name:'14"X18B'},
+  {id:'m15', name:'24"X6B-2'}
+];
 
 // ── 기계 선택 화면 렌더 ───────────────────────────────────────
 function renderMachineGrid(){
   const grid = document.getElementById('machine-grid');
-  if (!config.machines || !config.machines.length){
-    grid.innerHTML = `<p style="color:var(--muted);font-size:15px;">config.json 에 기계를 설정하세요</p>`;
-    return;
-  }
 
-  const icons = {m1:'🔩',m2:'⚙️',m3:'🔧',m4:'🔩',m5:'⚙️',m6:'🔧',
-                 m7:'🔩',m8:'⚙️',m9:'🔧',m10:'🔩',m11:'⚙️',m12:'🔧',
-                 m13:'🔩',m14:'⚙️',m15:'🔧'};
+  // 오더가 있는 기계만 표시
+  const active = MACHINE_LIST.filter(m => (orders[m.id] || []).length > 0);
+  const list   = active.length > 0 ? active : MACHINE_LIST;
 
-  grid.innerHTML = config.machines.map(m => {
+  grid.innerHTML = list.map(m => {
     const machOrders = orders[m.id] || [];
     const pending = machOrders.filter(o => {
       const p = prod[o.id];
-      const st = p?.status ?? o.initSt;
-      return st !== '완료';
+      return (p?.status ?? o.initSt) !== '완료';
     });
-    const total = machOrders.length;
-    const done  = total - pending.length;
+    const done = machOrders.length - pending.length;
     return `
       <button class="machine-btn" onclick="selectMachine('${m.id}','${m.name}')">
-        <div class="machine-btn-icon">${icons[m.id]||'⚙️'}</div>
         <div class="machine-btn-name">${m.name}</div>
         <div class="machine-btn-orders">
-          ${total > 0 ? `진행 ${pending.length}건 / 완료 ${done}건` : '오더 없음'}
+          ${machOrders.length > 0 ? `진행 ${pending.length}건 / 완료 ${done}건` : '오더 없음'}
         </div>
       </button>`;
   }).join('');
@@ -439,8 +429,9 @@ function toast(msg){
 }
 
 // ── 초기화 ───────────────────────────────────────────────────
-(async function init(){
-  await loadConfig();
+(function init(){
+  document.getElementById('hdr-kiosk').textContent = 'DSR 연선';
+  renderMachineGrid();
   connect();
 })();
 </script>
