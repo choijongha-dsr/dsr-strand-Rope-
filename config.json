@@ -1,0 +1,4 @@
+{
+  "kiosk_name": "DSR 연선",
+  "machines": ["m1", "m2", "m3"]
+}

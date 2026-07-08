@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>DSR 연선 키오스크</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+:root{
+  --navy:#0f2744;--navy2:#1a3a5c;
+  --red:#c0392b;--red2:#e74c3c;
+  --green:#1e8449;--green2:#27ae60;
+  --amber:#d68910;
+  --bg:#eef1f5;--white:#fff;--border:#dde2ea;
+  --text:#1c2a3a;--muted:#7f8c9a;
+}
+html,body{height:100%;font-family:'맑은 고딕','Malgun Gothic','Apple SD Gothic Neo',sans-serif;background:var(--bg);color:var(--text);overflow:hidden;}
+
+/* ── 헤더 ── */
+#hdr{
+  background:var(--navy);color:#fff;
+  display:flex;align-items:center;gap:12px;
+  padding:0 20px;height:64px;flex-shrink:0;
+  border-bottom:4px solid var(--red);position:relative;
+}
+#hdr h1{font-size:20px;font-weight:900;letter-spacing:-0.5px;}
+#hdr h1 span{color:var(--red2);}
+.hdr-kiosk{font-size:13px;color:#99b4c8;margin-left:4px;}
+.hdr-right{margin-left:auto;display:flex;align-items:center;gap:10px;}
+.live-badge{display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:20px;
+  background:rgba(46,204,113,0.15);border:1px solid rgba(46,204,113,0.3);font-size:12px;font-weight:700;color:#2ecc71;}
+.live-badge.off{background:rgba(192,57,43,0.15);border-color:rgba(192,57,43,0.3);color:#e74c3c;}
+.live-dot{width:8px;height:8px;border-radius:50%;background:#2ecc71;}
+.live-badge.off .live-dot{background:#e74c3c;}
+.hdr-date{font-size:13px;color:#99b4c8;font-weight:600;}
+
+/* ── 화면 전환 ── */
+.screen{display:none;flex-direction:column;height:calc(100vh - 68px);overflow:hidden;}
+.screen.active{display:flex;}
+
+/* ── 기계 선택 화면 ── */
+#screen-select{align-items:center;justify-content:center;gap:20px;padding:30px 20px;}
+.select-title{font-size:22px;font-weight:700;color:var(--navy);margin-bottom:10px;}
+.machine-grid{display:flex;flex-wrap:wrap;gap:20px;justify-content:center;width:100%;}
+.machine-btn{
+  background:var(--white);border:3px solid var(--border);border-radius:20px;
+  padding:30px 20px;cursor:pointer;transition:all 0.15s;
+  display:flex;flex-direction:column;align-items:center;gap:10px;
+  min-width:220px;flex:1;max-width:320px;
+  box-shadow:0 4px 20px rgba(0,0,0,0.08);
+  touch-action:manipulation;
+}
+.machine-btn:hover,.machine-btn:active{background:#f0f4ff;border-color:var(--navy2);transform:translateY(-2px);}
+.machine-btn-icon{font-size:42px;}
+.machine-btn-name{font-size:22px;font-weight:900;color:var(--navy);}
+.machine-btn-orders{font-size:14px;color:var(--muted);font-weight:600;}
+.machine-btn.loading{opacity:0.5;pointer-events:none;}
+
+.no-excel{text-align:center;padding:40px;color:var(--red);font-size:16px;line-height:2;}
+
+/* ── 입력 화면 ── */
+#screen-input{flex-direction:column;}
+.input-topbar{
+  background:var(--navy2);color:#fff;
+  display:flex;align-items:center;gap:14px;
+  padding:0 20px;height:56px;flex-shrink:0;
+}
+.back-btn{
+  background:rgba(255,255,255,0.15);border:none;color:#fff;
+  padding:8px 16px;border-radius:8px;cursor:pointer;font-size:14px;font-weight:700;font-family:inherit;
+  touch-action:manipulation;
+}
+.back-btn:active{background:rgba(255,255,255,0.3);}
+.input-machine-name{font-size:18px;font-weight:900;}
+.input-order-count{font-size:13px;color:#99b4c8;margin-left:4px;}
+
+/* ── 오더 목록 ── */
+.orders-scroll{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px;-webkit-overflow-scrolling:touch;}
+.order-card{background:var(--white);border-radius:14px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.07);}
+.order-card-hdr{
+  background:#f0f4ff;border-bottom:1px solid var(--border);
+  padding:12px 16px;display:flex;align-items:center;gap:10px;
+}
+.order-no{font-size:15px;font-weight:900;color:var(--navy);background:#dde8ff;padding:3px 10px;border-radius:20px;}
+.order-proc{font-size:14px;font-weight:700;color:var(--text);flex:1;}
+.order-qty{font-size:13px;color:var(--muted);font-weight:600;white-space:nowrap;}
+.order-status{font-size:12px;font-weight:700;padding:3px 8px;border-radius:10px;white-space:nowrap;}
+.status-대기{background:#e0e7ef;color:#555;}
+.status-진행{background:#d5f0db;color:#1e6e3a;}
+.status-완료{background:#c8f7d4;color:#1e6e3a;text-decoration:line-through;}
+.status-IW{background:#fff3e0;color:#e65100;}
+
+.order-inputs{padding:14px 16px;display:flex;gap:16px;align-items:center;}
+.prod-field{flex:1;display:flex;flex-direction:column;gap:6px;}
+.prod-label{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;}
+.prod-input{
+  border:2.5px solid var(--border);border-radius:10px;
+  padding:14px 12px;font-size:20px;font-weight:800;text-align:center;
+  font-family:inherit;color:var(--text);background:#fff;width:100%;
+  transition:border-color 0.15s;touch-action:manipulation;
+  -moz-appearance:textfield;appearance:textfield;
+}
+.prod-input::-webkit-inner-spin-button{display:none;}
+.prod-input:focus{outline:none;border-color:var(--navy2);box-shadow:0 0 0 4px rgba(26,58,92,0.12);}
+.prod-input.has-val{border-color:var(--green2);color:var(--green);}
+.prod-unit{font-size:12px;color:var(--muted);text-align:center;margin-top:2px;font-weight:600;}
+
+.order-done-overlay{
+  display:flex;align-items:center;justify-content:center;
+  padding:16px;font-size:16px;font-weight:700;color:var(--green);gap:8px;
+}
+
+/* ── 저장 바 ── */
+.save-bar{
+  background:var(--white);border-top:1px solid var(--border);
+  padding:14px 20px;display:flex;gap:12px;align-items:center;flex-shrink:0;
+  box-shadow:0 -4px 20px rgba(0,0,0,0.06);
+}
+.save-info{flex:1;font-size:13px;color:var(--muted);font-weight:600;}
+.btn-save{
+  background:var(--green2);color:#fff;border:none;
+  padding:16px 40px;border-radius:12px;font-size:18px;font-weight:900;
+  cursor:pointer;font-family:inherit;touch-action:manipulation;
+  box-shadow:0 4px 16px rgba(39,174,96,0.35);transition:all 0.15s;
+  min-width:160px;
+}
+.btn-save:active{background:#219a52;transform:scale(0.97);}
+.btn-save:disabled{background:#ccc;box-shadow:none;cursor:default;}
+
+/* ── 토스트 ── */
+#toast{
+  position:fixed;bottom:30px;left:50%;transform:translateX(-50%);
+  background:rgba(15,25,45,0.92);color:#fff;
+  padding:12px 24px;border-radius:30px;font-size:15px;font-weight:700;
+  opacity:0;transition:opacity 0.25s;z-index:999;pointer-events:none;
+  white-space:nowrap;backdrop-filter:blur(8px);
+}
+#toast.show{opacity:1;}
+
+/* ── 빈 상태 ── */
+.empty{text-align:center;padding:60px 20px;color:var(--muted);}
+.empty-icon{font-size:48px;margin-bottom:16px;}
+.empty p{font-size:15px;line-height:1.8;}
+</style>
+</head>
+<body>
+
+<!-- 헤더 -->
+<div id="hdr">
+  <h1>DSR <span>연선</span></h1>
+  <span class="hdr-kiosk" id="hdr-kiosk"></span>
+  <div class="hdr-right">
+    <div class="live-badge off" id="live-badge">
+      <div class="live-dot"></div>
+      <span id="live-txt">연결 중...</span>
+    </div>
+    <div class="hdr-date" id="hdr-date"></div>
+  </div>
+</div>
+
+<!-- 화면 1: 기계 선택 -->
+<div id="screen-select" class="screen active">
+  <p class="select-title">기계를 선택하세요</p>
+  <div class="machine-grid" id="machine-grid">
+    <p style="color:var(--muted);font-size:15px;">로딩 중...</p>
+  </div>
+</div>
+
+<!-- 화면 2: 생산량 입력 -->
+<div id="screen-input" class="screen">
+  <div class="input-topbar">
+    <button class="back-btn" onclick="goBack()">← 뒤로</button>
+    <span class="input-machine-name" id="input-machine-name"></span>
+    <span class="input-order-count" id="input-order-count"></span>
+  </div>
+  <div class="orders-scroll" id="orders-scroll"></div>
+  <div class="save-bar">
+    <div class="save-info" id="save-info">입력 후 저장하세요</div>
+    <button class="btn-save" id="btn-save" onclick="save()">💾 저장</button>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+let orders    = {};   // { mId: [{id,noGroup,proc,qty,initDay,initNight,initSt,...}] }
+let prod      = {};   // { orderId: {day, night} }
+let config    = { machines:[], kiosk_name:'' };
+let curMach   = null;
+let ws        = null;
+
+// ── 날짜 표시 ────────────────────────────────────────────────
+function updateClock(){
+  const now = new Date();
+  const d = now.toLocaleDateString('ko-KR',{month:'long',day:'numeric',weekday:'short'});
+  const t = now.toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});
+  document.getElementById('hdr-date').textContent = `${d} ${t}`;
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// ── WebSocket 연결 ────────────────────────────────────────────
+function connect(){
+  const url = `ws://${location.host}`;
+  ws = new WebSocket(url);
+
+  ws.onopen = () => {
+    setLive(true);
+  };
+
+  ws.onmessage = e => {
+    const msg = JSON.parse(e.data);
+    if (msg.type === 'orders'){
+      orders = msg.data;
+      renderMachineGrid();
+      if (curMach) renderOrders(curMach);
+    } else if (msg.type === 'prod' || msg.type === 'prod-update'){
+      prod = msg.data;
+      if (curMach) renderOrders(curMach);
+    }
+  };
+
+  ws.onclose = () => {
+    setLive(false);
+    setTimeout(connect, 3000);
+  };
+
+  ws.onerror = () => ws.close();
+}
+
+function setLive(on){
+  const el = document.getElementById('live-badge');
+  el.className = 'live-badge' + (on?'':' off');
+  document.getElementById('live-txt').textContent = on ? 'LIVE' : '연결 끊김';
+}
+
+// ── 설정 로드 ─────────────────────────────────────────────────
+async function loadConfig(){
+  try {
+    const r = await fetch('/api/config');
+    config = await r.json();
+    document.getElementById('hdr-kiosk').textContent = config.kiosk_name || '';
+    renderMachineGrid();
+  } catch(e) {
+    console.warn('config 로드 실패', e);
+  }
+}
+
+// ── 기계 선택 화면 렌더 ───────────────────────────────────────
+function renderMachineGrid(){
+  const grid = document.getElementById('machine-grid');
+  if (!config.machines || !config.machines.length){
+    grid.innerHTML = `<p style="color:var(--muted);font-size:15px;">config.json 에 기계를 설정하세요</p>`;
+    return;
+  }
+
+  const icons = {m1:'🔩',m2:'⚙️',m3:'🔧',m4:'🔩',m5:'⚙️',m6:'🔧',
+                 m7:'🔩',m8:'⚙️',m9:'🔧',m10:'🔩',m11:'⚙️',m12:'🔧',
+                 m13:'🔩',m14:'⚙️',m15:'🔧'};
+
+  grid.innerHTML = config.machines.map(m => {
+    const machOrders = orders[m.id] || [];
+    const pending = machOrders.filter(o => {
+      const p = prod[o.id];
+      const st = p?.status ?? o.initSt;
+      return st !== '완료';
+    });
+    const total = machOrders.length;
+    const done  = total - pending.length;
+    return `
+      <button class="machine-btn" onclick="selectMachine('${m.id}','${m.name}')">
+        <div class="machine-btn-icon">${icons[m.id]||'⚙️'}</div>
+        <div class="machine-btn-name">${m.name}</div>
+        <div class="machine-btn-orders">
+          ${total > 0 ? `진행 ${pending.length}건 / 완료 ${done}건` : '오더 없음'}
+        </div>
+      </button>`;
+  }).join('');
+}
+
+// ── 기계 선택 → 입력 화면 ────────────────────────────────────
+function selectMachine(mId, mName){
+  curMach = mId;
+  document.getElementById('input-machine-name').textContent = mName;
+  renderOrders(mId);
+  showScreen('screen-input');
+}
+
+function goBack(){
+  curMach = null;
+  showScreen('screen-select');
+}
+
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+// ── 오더 목록 렌더 ────────────────────────────────────────────
+function renderOrders(mId){
+  const machOrders = orders[mId] || [];
+  const el = document.getElementById('orders-scroll');
+
+  if (!machOrders.length){
+    el.innerHTML = `
+      <div class="empty">
+        <div class="empty-icon">📋</div>
+        <p>현재 오더가 없습니다.<br>엑셀 파일을 확인하세요.</p>
+      </div>`;
+    document.getElementById('input-order-count').textContent = '';
+    return;
+  }
+
+  const pending = machOrders.filter(o => {
+    const p = prod[o.id];
+    return (p?.status ?? o.initSt) !== '완료';
+  });
+  document.getElementById('input-order-count').textContent = `(미완료 ${pending.length}/${machOrders.length}건)`;
+
+  el.innerHTML = machOrders.map(o => {
+    const p    = prod[o.id] || {};
+    const day   = p.day   !== undefined ? p.day   : (o.initDay   || '');
+    const night = p.night !== undefined ? p.night : (o.initNight || '');
+    const st    = p.status !== undefined ? p.status : o.initSt;
+    const isDone= st === '완료' || st === 'ST완료';
+
+    const stCls = isDone ? 'status-완료'
+      : st.includes('IW') ? 'status-IW'
+      : (st === '대기' ? 'status-대기' : 'status-진행');
+
+    const remain = o.qty - (Number(p.day)||0) - (Number(p.night)||0);
+
+    if (isDone){
+      return `
+        <div class="order-card">
+          <div class="order-card-hdr">
+            <span class="order-no">${o.noGroup}</span>
+            <span class="order-proc">${o.proc}</span>
+            <span class="order-status ${stCls}">${st}</span>
+          </div>
+          <div class="order-done-overlay">✅ 완료</div>
+        </div>`;
+    }
+
+    return `
+      <div class="order-card" id="card-${o.id.replace(/\|/g,'_')}">
+        <div class="order-card-hdr">
+          <span class="order-no">${o.noGroup}</span>
+          <span class="order-proc">${o.proc}</span>
+          ${o.qty ? `<span class="order-qty">잔량 ${remain > 0 ? remain.toLocaleString() : 0}m</span>` : ''}
+          <span class="order-status ${stCls}">${st}</span>
+        </div>
+        <div class="order-inputs">
+          <div class="prod-field">
+            <div class="prod-label">주간 생산량</div>
+            <input type="number" class="prod-input ${day!==''&&day!==0?'has-val':''}"
+              value="${day}"
+              min="0" step="1" inputmode="numeric"
+              onchange="updateProd('${o.id}','day',this.value)"
+              oninput="this.classList.toggle('has-val',this.value!='')">
+            <div class="prod-unit">m</div>
+          </div>
+          <div class="prod-field">
+            <div class="prod-label">야간 생산량</div>
+            <input type="number" class="prod-input ${night!==''&&night!==0?'has-val':''}"
+              value="${night}"
+              min="0" step="1" inputmode="numeric"
+              onchange="updateProd('${o.id}','night',this.value)"
+              oninput="this.classList.toggle('has-val',this.value!='')">
+            <div class="prod-unit">m</div>
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+
+  updateSaveInfo();
+}
+
+// ── 값 변경 ──────────────────────────────────────────────────
+function updateProd(id, field, val){
+  if (!prod[id]) prod[id] = {};
+  prod[id][field] = val === '' ? '' : Number(val);
+  updateSaveInfo();
+}
+
+function updateSaveInfo(){
+  const machOrders = orders[curMach] || [];
+  let changed = 0;
+  machOrders.forEach(o => {
+    const p = prod[o.id];
+    if (!p) return;
+    if ((p.day !== undefined && p.day !== '' && p.day !== (o.initDay||0)) ||
+        (p.night !== undefined && p.night !== '' && p.night !== (o.initNight||0)))
+      changed++;
+  });
+  document.getElementById('save-info').textContent =
+    changed > 0 ? `${changed}개 오더 변경됨` : '입력 후 저장하세요';
+}
+
+// ── 저장 ─────────────────────────────────────────────────────
+async function save(){
+  const machOrders = orders[curMach] || [];
+  const payload = {};
+  machOrders.forEach(o => { if (prod[o.id]) payload[o.id] = prod[o.id]; });
+
+  const btn = document.getElementById('btn-save');
+  btn.disabled = true;
+  btn.textContent = '저장 중...';
+
+  try {
+    const r = await fetch('/api/production', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(payload)
+    });
+    const json = await r.json();
+    if (json.ok){
+      toast('✅ 저장 완료');
+      renderMachineGrid();
+    } else {
+      toast('❌ 저장 실패');
+    }
+  } catch(e){
+    toast('❌ 서버 연결 실패');
+  }
+
+  btn.disabled = false;
+  btn.textContent = '💾 저장';
+}
+
+// ── 토스트 ───────────────────────────────────────────────────
+let toastTimer;
+function toast(msg){
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2500);
+}
+
+// ── 초기화 ───────────────────────────────────────────────────
+(async function init(){
+  await loadConfig();
+  connect();
+})();
+</script>
+</body>
+</html>

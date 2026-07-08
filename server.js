@@ -1,229 +1,196 @@
-const express = require('express');
-const fs = require('fs');
-const path = require('path');
-const http = require('http');
-const WebSocket = require('ws');
+const express  = require('express');
+const http     = require('http');
+const WebSocket= require('ws');
 const chokidar = require('chokidar');
-const XLSX = require('xlsx');
+const XLSX     = require('xlsx');
+const fs       = require('fs');
+const path     = require('path');
 
-const app = express();
+const PORT       = 3000;
+const EXCEL_PATH = '\\\\10.10.12.61\\공정 공유폴더\\공정폴더\\2026공정표.xlsx';
+const DATA_DIR   = path.join(__dirname, 'data');
+const PROD_FILE  = path.join(DATA_DIR, 'production.json');
+const CFG_FILE   = path.join(__dirname, 'config.json');
+
+fs.mkdirSync(DATA_DIR, { recursive: true });
+
+const app    = express();
 const server = http.createServer(app);
-const wss = new WebSocket.Server({ server });
+const wss    = new WebSocket.Server({ server });
 
-const PORT = process.env.PORT || 3000;
-const DATA_DIR = path.join(__dirname, 'data');
-
-// 감시할 Excel 파일 경로 (환경변수로 변경 가능)
-const EXCEL_PATH = process.env.EXCEL_PATH ||
-  '\\\\10.10.12.61\\공정 공유폴더\\공정폴더\\2026공정표.xlsx';
-
-// data 디렉토리 없으면 자동 생성 (Railway 등 배포 환경 대응)
-if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
-
-app.use(express.json({ limit: '10mb' }));
+app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-function readJson(file) {
-  const p = path.join(DATA_DIR, file);
-  try { return JSON.parse(fs.readFileSync(p, 'utf8')); }
-  catch { return {}; }
-}
-
-function writeJson(file, data) {
-  const p = path.join(DATA_DIR, file);
-  fs.writeFileSync(p, JSON.stringify(data, null, 2), 'utf8');
-}
-
-// 기계명 정규화 (클라이언트와 동일 로직)
+// ── 기계명 정규화 ──────────────────────────────────────────────
 const MACH_NORM = {
-  '16"x35b':'m1','12"x36b-1':'m2','12"x36b-2':'m3',
-  '12"x25b-1':'m4','12"x35b-2':'m5','12"x42b':'m6',
-  '10"x35b':'m7','8"x36b':'m8',
-  '12"x6b-1':'m9','12"x6b-2':'m10','12"x6b-3':'m11','12"x6b-4':'m12',
-  '12"x9b':'m13','14"x6b':'m14','16"x6b':'m15'
+  '16"x35b' :'m1', '12"x36b-1':'m2', '12"x36b-2':'m3', '12"x25b-1':'m4',
+  '12"x35b-2':'m5', '12"x42b'  :'m6', '10"x35b'  :'m7', '8"x36b'   :'m8',
+  '12"x6b'  :'m9', '14"x6b'   :'m10','16"x6b'   :'m11','10"x6b-2' :'m12',
+  '12"x9b'  :'m13','14"x18b'  :'m14','24"x6b-2' :'m15'
+};
+const MACHINE_NAMES = {
+  m1:'16"x35B', m2:'12"X36B-1', m3:'12"X36B-2', m4:'12"x25B-1',
+  m5:'12"x35B-2', m6:'12"x42B', m7:'10"x35B', m8:'8"x36B',
+  m9:'12"x6B', m10:'14"X6B', m11:'16"X6B', m12:'10"X6B-2',
+  m13:'12"x9B', m14:'14"X18B', m15:'24"X6B-2'
 };
 function normMach(raw) {
   if (!raw) return null;
-  return MACH_NORM[String(raw).replace(/[\r\n\s]+/g,'').replace(/“|”/g,'"').toLowerCase()] || null;
+  return MACH_NORM[String(raw).replace(/[\r\n\s]+/g,'').replace(/[""]/g,'"').toLowerCase()] || null;
+}
+
+// ── 생산 데이터 ────────────────────────────────────────────────
+function loadProd() {
+  try { return JSON.parse(fs.readFileSync(PROD_FILE,'utf8')); }
+  catch { return {}; }
+}
+function saveProd(data) {
+  fs.writeFileSync(PROD_FILE, JSON.stringify(data,null,2), 'utf8');
+}
+
+// ── 설정 ────────────────────────────────────────────────────────
+function loadConfig() {
+  try { return JSON.parse(fs.readFileSync(CFG_FILE,'utf8')); }
+  catch { return { machines:['m1','m2','m3'], kiosk_name:'DSR 연선' }; }
+}
+
+// ── Excel 파싱 (서버사이드) ─────────────────────────────────────
+const LAYER_KEYS   = ['중상층','중중층','중하층','코아층','상층'];
+const STATUS_OPTS  = ['대기','IW완료','ST진행','ST완료','중층완료','1챠지완','완료'];
+
+function parseExcel() {
+  if (!fs.existsSync(EXCEL_PATH)) return null;
+  try {
+    const wb         = XLSX.read(fs.readFileSync(EXCEL_PATH), { type:'buffer' });
+    const dateSheets = wb.SheetNames.filter(n => /^\d+\.\d+$/.test(n.trim()));
+    if (!dateSheets.length) return null;
+
+    const ws   = wb.Sheets[dateSheets[dateSheets.length-1]];
+    const rows = XLSX.utils.sheet_to_json(ws, { header:1, defval:null });
+
+    const machIdxs = [];
+    rows.forEach((r,i) => {
+      if (r[0] && typeof r[0]==='string' && r[0].includes('"') && r[0]!=='기계명')
+        machIdxs.push(i);
+    });
+
+    const orders = {};
+    machIdxs.forEach((mIdx, mi) => {
+      const mId = normMach(rows[mIdx][0]);
+      if (!mId) return;
+      orders[mId] = [];
+
+      let lastNo = null;
+      const nextIdx = machIdxs[mi+1] ?? rows.length;
+
+      for (let ri = mIdx+1; ri < nextIdx; ri++) {
+        const row = rows[ri];
+        if (!row) continue;
+        const spec = row[2];
+        if (!spec || typeof spec!=='string' || !spec.trim()) continue;
+        const specStr   = spec.trim();
+        const hasQty    = Number(row[8]) > 0;
+        const layerName = LAYER_KEYS.find(k => specStr.includes(k)) || '';
+        if (!/^\d/.test(specStr) && !layerName && !hasQty) continue;
+
+        let noVal = '';
+        if (row[0]!=null && String(row[0]).trim()) noVal = String(row[0]).trim();
+        else if (row[1]!=null && String(row[1]).trim()) noVal = String(row[1]).trim();
+        if (noVal && !noVal.includes('"') && noVal!=='기계명') lastNo = noVal;
+        const currentNo = lastNo || String(ri);
+
+        const rawSt = row[11] ? String(row[11]).trim() : '';
+        const initSt = (() => {
+          if (!rawSt) return '대기';
+          if (rawSt==='완') return 'ST완료';
+          if (/^IW$/i.test(rawSt)||/^IW완료$/i.test(rawSt)) return 'IW완료';
+          return STATUS_OPTS.find(s=>s.toLowerCase()===rawSt.toLowerCase()) || '대기';
+        })();
+
+        orders[mId].push({
+          id:        `${mId}||${currentNo}||${specStr}`,
+          noGroup:   currentNo,
+          proc:      specStr,
+          qty:       Number(row[8])  || 0,
+          initDay:   Number(row[9])  || 0,
+          initNight: Number(row[10]) || 0,
+          initSt,
+          wire:      row[15] ? String(row[15]).trim() : '',
+          ts:        row[17] ? String(row[17]).trim() : '',
+          note:      row[18] ? String(row[18]).trim() : '',
+        });
+      }
+    });
+    return orders;
+  } catch(e) {
+    console.warn('[Excel] 파싱 오류:', e.message);
+    return null;
+  }
 }
 
 // ── REST API ───────────────────────────────────────────────────
-
-app.get('/api/stranding/data', (req, res) => res.json(readJson('stranding.json')));
-app.post('/api/stranding/data', (req, res) => { writeJson('stranding.json', req.body); res.json({ ok: true }); });
-
-app.get('/api/ilbo/data', (req, res) => res.json(readJson('ilbo.json')));
-app.post('/api/ilbo/data', (req, res) => { writeJson('ilbo.json', req.body); res.json({ ok: true }); });
-
-app.get('/api/excel-path', (req, res) => {
-  res.json({ path: EXCEL_PATH, exists: fs.existsSync(EXCEL_PATH) });
+app.get('/api/config', (req, res) => {
+  const cfg = loadConfig();
+  const result = {
+    kiosk_name: cfg.kiosk_name || 'DSR 연선',
+    machines: (cfg.machines || []).map(id => ({
+      id, name: MACHINE_NAMES[id] || id
+    }))
+  };
+  res.json(result);
 });
 
-// 엑셀 기계명 목록 확인용 (디버그)
-app.get('/api/excel/machines', (req, res) => {
-  if (!fs.existsSync(EXCEL_PATH)) return res.json({ error: '파일 없음' });
-  try {
-    const wb = XLSX.read(fs.readFileSync(EXCEL_PATH), { type: 'buffer' });
-    const dateSheets = wb.SheetNames.filter(n => /^\d+\.\d+$/.test(n.trim()));
-    const sheetName = dateSheets[dateSheets.length - 1];
-    const rows = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], { header: 1, defval: null });
-    const machines = rows
-      .filter(r => r[0] && typeof r[0] === 'string' && r[0].includes('"') && r[0] !== '기계명')
-      .map(r => r[0]);
-    res.json({ sheet: sheetName, machines });
-  } catch(e) { res.json({ error: e.message }); }
+app.get('/api/orders', (req, res) => {
+  res.json(parseExcel() || {});
 });
 
-// ── EXCEL 쓰기 API (양방향 동기화) ─────────────────────────────
-app.post('/api/excel/write', (req, res) => {
-  if (!fs.existsSync(EXCEL_PATH)) {
-    return res.json({ ok: false, error: '엑셀 파일을 찾을 수 없습니다.' });
-  }
+app.get('/api/production', (req, res) => {
+  res.json(loadProd());
+});
 
-  const { prodData = {}, baseOrders = {}, prevData = {} } = req.body;
+app.post('/api/production', (req, res) => {
+  const prod = loadProd();
+  Object.assign(prod, req.body);
+  saveProd(prod);
+  broadcast({ type:'prod-update', data:prod });
+  console.log(`[저장] ${Object.keys(req.body).length}개 오더 업데이트`);
+  res.json({ ok:true });
+});
 
-  try {
-    const buf = fs.readFileSync(EXCEL_PATH);
-    const wb  = XLSX.read(buf, { type: 'buffer', cellStyles: true, cellFormulas: true });
-
-    // 최신 날짜 시트 찾기
-    const dateSheets = wb.SheetNames.filter(n => /^\d+\.\d+$/.test(n.trim()));
-    if (!dateSheets.length) return res.json({ ok: false, error: '날짜 형식 시트를 찾을 수 없습니다.' });
-    const sheetName = dateSheets[dateSheets.length - 1];
-    const ws = wb.Sheets[sheetName];
-    const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null });
-
-    // 기계 행 위치 파악
-    const machRows = [];
-    rows.forEach((row, i) => {
-      if (row[0] && typeof row[0] === 'string' && row[0].includes('"') && row[0] !== '기계명') {
-        const mId = normMach(row[0]);
-        if (mId) machRows.push({ idx: i, mId });
-      }
-    });
-
-    let updatedCells = 0;
-
-    function setCell(ri, ci, val, type) {
-      const addr = XLSX.utils.encode_cell({ r: ri, c: ci });
-      const existing = ws[addr] || {};
-      ws[addr] = { ...existing, v: val, t: type };
-      delete ws[addr].f; // 수식 제거 (값으로 덮어씀)
-      updatedCells++;
-    }
-
-    machRows.forEach(({ idx: mIdx, mId }, mi) => {
-      const nextIdx = machRows[mi + 1]?.idx ?? rows.length;
-      const orders  = baseOrders[mId] || [];
-
-      // 오더 행 업데이트
-      let lastNo = null;
-      for (let ri = mIdx + 1; ri < nextIdx; ri++) {
-        const row = rows[ri];
-        if (!row) continue;
-
-        // noGroup 추적 (클라이언트와 동일 로직)
-        let noVal = '';
-        if (row[0] != null && String(row[0]).trim()) noVal = String(row[0]).trim();
-        else if (row[1] != null && String(row[1]).trim()) noVal = String(row[1]).trim();
-        if (noVal && !noVal.includes('"') && noVal !== '기계명') lastNo = noVal;
-        const currentNo = lastNo || String(ri);
-
-        const spec = row[2] ? String(row[2]).trim() : '';
-        if (!spec) continue;
-
-        const order = orders.find(o => o.proc === spec && o.noGroup === currentNo);
-        if (!order) continue;
-
-        const pd = prodData[order.id];
-        if (!pd) continue;
-
-        if (pd.day   != null) setCell(ri, 9,  Number(pd.day),   'n');
-        if (pd.night != null) setCell(ri, 10, Number(pd.night), 'n');
-        if (pd.status != null) {
-          const stVal = pd.status === 'ST완료' ? '완' : pd.status;
-          setCell(ri, 11, stVal, 's');
-        }
-      }
-
-      // 기계 행 주간/야간 합계 업데이트
-      const dayTotal   = orders.reduce((s, o) => s + (Number(prodData[o.id]?.day)   || 0), 0);
-      const nightTotal = orders.reduce((s, o) => s + (Number(prodData[o.id]?.night) || 0), 0);
-      setCell(mIdx, 9,  dayTotal,   'n');
-      setCell(mIdx, 10, nightTotal, 'n');
-    });
-
-    // 내가 쓴 변경은 무시 (무한루프 방지)
-    suppressUntil = Date.now() + 15000;
-
-    const outBuf = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx', cellStyles: true });
-    fs.writeFileSync(EXCEL_PATH, outBuf);
-
-    res.json({ ok: true, updatedCells, sheet: sheetName });
-  } catch (e) {
-    const isLocked = ['EACCES','EBUSY','EPERM'].includes(e.code) || /lock/i.test(e.message);
-    res.json({
-      ok: false,
-      error: isLocked
-        ? '엑셀 파일이 열려 있습니다. 파일을 닫고 다시 시도해주세요.'
-        : e.message
-    });
-  }
+app.get('/api/excel-status', (req, res) => {
+  res.json({ exists: fs.existsSync(EXCEL_PATH), path: EXCEL_PATH });
 });
 
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'stranding.html'));
+  res.sendFile(path.join(__dirname, 'public', 'kiosk.html'));
 });
 
-// ── WEBSOCKET (Excel → 웹) ─────────────────────────────────────
-let suppressUntil = 0;
-
-function broadcastExcel(reason) {
-  if (wss.clients.size === 0) return;
-  if (Date.now() < suppressUntil) {
-    console.log(`[Excel] ${reason} 감지됐지만 쓰기 직후라 무시`);
-    return;
-  }
-  try {
-    const buf    = fs.readFileSync(EXCEL_PATH);
-    const base64 = buf.toString('base64');
-    const msg    = JSON.stringify({ type: 'excel-update', data: base64, reason });
-    wss.clients.forEach(c => { if (c.readyState === WebSocket.OPEN) c.send(msg); });
-    console.log(`[Excel] ${reason} → ${wss.clients.size}개 클라이언트에 전송`);
-  } catch (e) {
-    console.warn(`[Excel] 읽기 실패: ${e.message}`);
-    const err = JSON.stringify({ type: 'excel-error', message: e.message });
-    wss.clients.forEach(c => { if (c.readyState === WebSocket.OPEN) c.send(err); });
-  }
+// ── WebSocket ──────────────────────────────────────────────────
+function broadcast(msg) {
+  const str = JSON.stringify(msg);
+  wss.clients.forEach(c => { if (c.readyState===WebSocket.OPEN) c.send(str); });
 }
 
-wss.on('connection', (ws) => {
+wss.on('connection', ws => {
   console.log('[WS] 클라이언트 연결');
-  ws.on('close', () => console.log('[WS] 클라이언트 연결 종료'));
-  if (fs.existsSync(EXCEL_PATH)) {
-    try {
-      const buf = fs.readFileSync(EXCEL_PATH);
-      ws.send(JSON.stringify({ type: 'excel-update', data: buf.toString('base64'), reason: '연결 초기화' }));
-    } catch (e) {
-      console.warn(`[Excel] 초기 전송 실패: ${e.message}`);
-    }
-  }
+  const orders = parseExcel();
+  if (orders) ws.send(JSON.stringify({ type:'orders', data:orders }));
+  ws.send(JSON.stringify({ type:'prod', data:loadProd() }));
+  ws.on('close', () => console.log('[WS] 연결 종료'));
 });
 
-// 네트워크 공유 폴더 감시 (폴링 방식)
-const watcher = chokidar.watch(EXCEL_PATH, {
-  usePolling: true,
-  interval: 2000,        // 2초마다 폴링 (기존 5초)
-  ignoreInitial: true,
-  awaitWriteFinish: { stabilityThreshold: 1500, pollInterval: 300 }
-});
-
-watcher.on('change', () => broadcastExcel('파일 변경'));
-watcher.on('add',    () => broadcastExcel('파일 생성'));
-watcher.on('error',  err => console.warn(`[Watcher] 오류: ${err.message}`));
+// ── Excel 감시 ─────────────────────────────────────────────────
+chokidar.watch(EXCEL_PATH, {
+  usePolling:true, interval:2000, ignoreInitial:true,
+  awaitWriteFinish:{ stabilityThreshold:1500, pollInterval:300 }
+}).on('change', () => {
+  console.log('[Excel] 변경 감지 → 전송');
+  const orders = parseExcel();
+  if (orders) broadcast({ type:'orders', data:orders });
+}).on('error', err => console.warn('[Watcher] 오류:', err.message));
 
 console.log(`[Excel] 감시 중: ${EXCEL_PATH}`);
 
 server.listen(PORT, () => {
-  console.log(`DSR 연선공정표 서버 실행 중: http://localhost:${PORT}`);
+  console.log(`\nDSR 연선공정표 서버: http://localhost:${PORT}\n`);
 });
